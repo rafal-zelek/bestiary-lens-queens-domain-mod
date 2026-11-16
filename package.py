@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Build the release from an explicit allowlist, never from the working tree."""
+import hashlib
+from pathlib import Path
+import zipfile
+
+VERSION = '0.1.0'
+MOD_FILES = ('enabled.txt', 'Scripts/main.lua', 'Scripts/config.lua',
+             'Scripts/card_model.lua', 'Scripts/card_view.lua')
+PAYLOAD = tuple('Mods/BestiaryLens/' + name for name in MOD_FILES) + (
+    'README.md', 'LICENSE', 'deploy.py', 'package.py')
+
+def build(root):
+    root = Path(root)
+    content = [(name, (root / name).read_bytes()) for name in PAYLOAD]
+    target = root / 'build' / ('BestiaryLens-' + VERSION + '.zip')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    temporary = target.with_suffix('.zip.tmp')
+    with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as archive:
+        for name, data in content:
+            info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o100644 << 16
+            archive.writestr(info, data)
+    temporary.replace(target)
+    sha = hashlib.sha256(target.read_bytes()).hexdigest()
+    target.with_suffix('.zip.sha256').write_text(sha + '  ' + target.name + '\n')
+    return target
+
+if __name__ == '__main__':
+    print(build(Path(__file__).resolve().parent))
