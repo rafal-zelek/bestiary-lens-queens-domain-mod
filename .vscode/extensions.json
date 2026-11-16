@@ -1,0 +1,11 @@
+{
+  "recommendations": [
+    "sumneko.lua",
+    "JohnnyMorganz.stylua"
+  ],
+  "unwantedRecommendations": [
+    "tangzx.emmylua",
+    "yinfei.luahelper",
+    "cppcxy.emmylua-codestyle"
+  ]
+}

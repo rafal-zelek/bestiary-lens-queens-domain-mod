@@ -1,0 +1,41 @@
+{
+  "diagnostics.globals": [
+    "BestiaryLens_TEST_MODE",
+    "CancelDelayedAction",
+    "ExecuteInGameThread",
+    "FindAllOf",
+    "FName",
+    "FText",
+    "Key",
+    "LoopInGameThreadWithDelay",
+    "RegisterHook",
+    "RegisterKeyBind",
+    "StaticConstructObject",
+    "StaticFindObject",
+    "api",
+    "GenerateLuaTypes"
+  ],
+  "format.enable": false,
+  "runtime.path": [
+    "?.lua",
+    "?/init.lua",
+    "Mods/BestiaryLens/Scripts/?.lua"
+  ],
+  "runtime.version": "Lua 5.4",
+  "workspace.checkThirdParty": "Disable",
+  "workspace.ignoreDir": [
+    ".git",
+    "build",
+    "backups",
+    "dist",
+    "debug",
+    "notes",
+    "ui-inspection",
+    "types"
+  ],
+  "workspace.library": [
+    "types/queens-domain/13540/bindings"
+  ],
+  "workspace.maxPreload": 5000,
+  "workspace.preloadFileSize": 5000
+}
