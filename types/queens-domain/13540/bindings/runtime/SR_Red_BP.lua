@@ -1,0 +1,21 @@
+---@meta
+
+---@class ASR_Red_BP_C : AFS_StaticMeshActor_C
+---@field COlorLight UPointLightComponent
+---@field GlowSpriteComp6 UGlowSpriteComp_C
+---@field GlowSpriteComp5 UGlowSpriteComp_C
+---@field GlowSpriteComp4 UGlowSpriteComp_C
+---@field GlowSpriteComp3 UGlowSpriteComp_C
+---@field GlowSpriteComp2 UGlowSpriteComp_C
+---@field GlowSpriteComp1 UGlowSpriteComp_C
+---@field GlowSpriteComp UGlowSpriteComp_C
+---@field PointLight8 UPointLightComponent
+---@field PointLight7 UPointLightComponent
+---@field PointLight6 UPointLightComponent
+---@field PointLight5 UPointLightComponent
+---@field PointLight4 UPointLightComponent
+---@field PointLight3 UPointLightComponent
+---@field PointLight2 UPointLightComponent
+---@field PointLight1 UPointLightComponent
+---@field PointLight UPointLightComponent
+local ASR_Red_BP_C = {}

@@ -1,0 +1,8 @@
+---@meta
+
+---@class FHUD_QueuedLine
+---@field STart_2_AA6580874163CCF3BB283188E7AFD47A FVector2D
+---@field End_4_84F6213C41B15D6BE1AF9A9A527F423A FVector2D
+---@field Color_7_D21A54C14DCA0DB8BED1A5AE506913FB FLinearColor
+---@field Thickness_10_C19E0A1B4B74804DBBC590A9F8E01CCC float
+local FHUD_QueuedLine = {}

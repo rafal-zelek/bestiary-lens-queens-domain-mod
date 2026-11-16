@@ -1,0 +1,29 @@
+---@meta
+
+---@class AJosamiLord_Bestiary_BP_C : AEnemyBase_C
+---@field Sword UStaticMeshComponent
+---@field Running boolean
+---@field RunningAttackSideIsRight boolean
+---@field SnapTargetLoc FVector
+---@field GunAimPoint FVector
+---@field ActualLastSeenPlayerLoc FVector
+---@field MassagedAimLocation FVector
+---@field ConsecutiveGunMisses int32
+---@field TotalShotsInThisGunMode int32
+---@field DidHitPlayerDuringArenaClear boolean
+---@field HasPlayerTarget boolean
+---@field CurrentGunChargeSFX UAudioComponent
+---@field HugeGunChargeFX UNiagaraComponent
+---@field ArenaClearAttackActivations int32
+---@field ActivePhaseIndex int32
+---@field Roaring boolean
+---@field RoarAOEFX UNiagaraComponent
+---@field RoarFloorFX UNiagaraComponent
+---@field CurrentRoarSound UAudioComponent
+---@field NeedsToGun boolean
+---@field StandaloneBoss boolean
+---@field DummyNPC TSubclassOf<ANPC_Base_C>
+---@field GunDeathMat UMaterialInterface
+---@field SwordDeathMat UMaterialInterface
+---@field SuperArmors boolean
+local AJosamiLord_Bestiary_BP_C = {}

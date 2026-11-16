@@ -1,0 +1,5 @@
+---@meta
+
+---@class AB33Blade_Pickup_C : AItemPickup_Base_C
+---@field Box UBoxComponent
+local AB33Blade_Pickup_C = {}

@@ -1,0 +1,195 @@
+---@meta
+
+---@class UPlayerBalance_C : UPrimaryDataAsset
+---@field BaseDamage float
+---@field DamagePerLevel float
+---@field Meat_DamageIncrease float
+---@field BaseMaxHP float
+---@field MaxHPPerLevel float
+---@field Chicken_HPIncrease float
+---@field BaseFlyingSwordUseCount int32
+---@field Clam_AttackSpeedCurveTuning float
+---@field FSChargeTimeAtChargeCount TArray<float>
+---@field PoisonDuration float
+---@field PoisonDamageTickRate float
+---@field ['PoisonDamagHP%'] float
+---@field HeavyDuration float
+---@field HeavyMovementSpeedMult float
+---@field WeakenDuration float
+---@field StickyDuration float
+---@field DiseaseDuration float
+---@field HeavyPowerMeterSpeedIncrease float
+---@field WeakenDamageReduction float
+---@field ['Berserk Potion Duration'] float
+---@field ['Iron Potion Duration'] float
+---@field ['Iron Skin Fruit Damage Reduction'] float
+---@field ['Iron Skin Potion Damage Reduction'] float
+---@field HealingHerb1HealAmount float
+---@field ['FS Grounded Distance'] float
+---@field ['FS Air Distance'] float
+---@field FlyingSwordDash_AttackMult float
+---@field UltraDamageMult float
+---@field XPCurveMult float
+---@field XPCurve TArray<int32>
+---@field RadiantFruitDuration float
+---@field RadiantFruitRadiusAdd float
+---@field RadiantFruitFadeDistAdd float
+---@field Lobster_MagicRateCurveTuning float
+---@field PitInvincibilityDuration float
+---@field Enemy_MoreDamageMultiplier float
+---@field Enemy_LessDamageMultiplier float
+---@field Enemy_NormalDamageMultiplier float
+---@field Enemy_ImmuneDamageMultiplier float
+---@field DiseaseEffect_DamageMultiplier float
+---@field EnergyCellRechargeTime float
+---@field EnemyBaseRespawnTimeInSeconds float
+---@field EnemyPerceptionDistanceCurve UCurveFloat
+---@field AccessorySlotCount int32
+---@field DaggerSlotCount int32
+---@field Enemy_StaggerHPPercent float
+---@field magicFireDuration float
+---@field MagicFireDamageMult float
+---@field WeaponChargeAttackMultiplier float
+---@field WeaponSlotCount int32
+---@field EnergyCellRegenerationDelay float
+---@field DaggerSpeedThresholds TArray<float>
+---@field WeaponSpeedThresholdnames TArray<FText>
+---@field WeaponSpeedThresholds TArray<float>
+---@field WeaponRanges TMap<EFS_WeaponRange, float>
+---@field WeaponWidths TMap<EFS_WeaponWidth, FVector2D>
+---@field BaseWeaponPoseAdjust FFS_WeaponViewConfig
+---@field GlobalRightArmOffset FTransform
+---@field ['Combo Reset Time'] float
+---@field ['MagicFireDamage%PerTick'] float
+---@field MagicFireDamageMinPerTick float
+---@field GolemBell_DamageReduction float
+---@field UndeadDragonMedal_Resistance float
+---@field Necronomicon_UltraChargeIncrease float
+---@field ['QueensCrown_AttackSpeedIncrease%'] float
+---@field QueensCrown_PowerMeterSpeedIncrease float
+---@field KingAbraonsCrown_EnemyHPMultiplier float
+---@field KingAbraonsCrown_EnemyDamageMultiplier float
+---@field Enemy_HeavyEffectTimeScale float
+---@field KingAbraonsCrown_XPMultiplier float
+---@field ItemPickupSizes TMap<ItemCategory::Type, float>
+---@field ItemThumbnailGridSizes TMap<ItemCategory::Type, float>
+---@field ItemInspectlGridSizes TMap<ItemCategory::Type, float>
+---@field RunSpeedMult float
+---@field BerserkFruitDamageIncrease float
+---@field BerserkPotionDamageIncrease float
+---@field MagicPoisonTriggerAmount float
+---@field ['MagicPoisonHP%PerTick'] float
+---@field ChargeAttackStartupTime float
+---@field RunPowerMeterDrainRate float
+---@field HeavyFlyingSwordDistMult float
+---@field Pizza_HealingEffectIncrease float
+---@field PoisonDamageMult float
+---@field PoisonDamageTickCount int32
+---@field BaseJumpForce float
+---@field JumpBootsJumpHeightMultiplier float
+---@field ['CursedGemDebuffDamage%'] float
+---@field MagicPoisonSurfaceRate float
+---@field HealingHerb2HealAmount float
+---@field HealingHerb3HealAmount float
+---@field HealingPotion1HealAmount float
+---@field HealingPotion2HealAmount float
+---@field HealingPotion3HealAmount float
+---@field DiseaseAttackPowerMultiplier float
+---@field Fish_ResistanceBonus float
+---@field BindingDuration float
+---@field BindingGunChargeDegenRateMultiplier float
+---@field BindingOnHitResourceDegenMultiplier float
+---@field EnemyWeakenDamageReduction float
+---@field EnemyDiseaseAttackPowerMultiplier float
+---@field ['ChargeConsumptionBonus%'] float
+---@field ChargeConsumptionBonusTable TArray<int32>
+---@field Enemy_AggroNoiseRadii TMap<EFS_AttackAggroNoise, float>
+---@field Enemy_AggroNoiseStrengths TMap<EFS_AttackAggroNoise, float>
+---@field AccessoryStats TMap<FName, FFS_AccessoryStats>
+---@field BaseJumpStaminaCost float
+---@field DeathPitDamagePercent float
+---@field CrushDamagePercent float
+---@field ['Resource Conversion To Weapon XP'] float
+---@field ['Resource Conversion To Ultra Charge'] float
+---@field ['Resource Conversion To Weapon Ability Points'] float
+---@field ['Resource Gen Per Power Meter Second'] float
+---@field ['Resource Gen Per Power Cell Spent'] float
+---@field ['Resource Gen Per Dagger Second Spent'] float
+---@field ['Resource Gen Per Weapon Ability Point Spent'] float
+---@field Charge_Resgen_Mult float
+---@field ResistedHit_Resgen_Mult float
+---@field CriticalHit_Resgen_Mult float
+---@field ['Cooldown Weapon Ability Points Gen / Second'] float
+---@field ['Binding Weapon Ability Point Degen / Second'] float
+---@field ['Binding Ultra Degen / Second'] float
+---@field LowHealthPercent float
+---@field UltraChargeRequirement float
+---@field ['Weapon XP Needed Per Level'] int32
+---@field AOE_ResGenMult float
+---@field BonusProjectile_ResGenMult float
+---@field ['Stagger Degen Removal Count'] float
+---@field ['Stagger Degen Removal Time'] float
+---@field ['Stagger Heavy Damage Bonus'] float
+---@field ['Stagger Heavy Damage Threshold'] float
+---@field ['Stagger Res Less Damage Mult'] float
+---@field ['Stagger Res More Damage Mult'] float
+---@field ['Stagger Res Normal Damage Mult'] float
+---@field ['Stagger Charge Hit Mult'] float
+---@field ['Stagger Charge Hit Mult Threshold'] float
+---@field ['Stagger Power Meter Threshold'] float
+---@field ['Stagger Power Meter Conversion'] float
+---@field ['Stagger EnergyCell Conversion'] float
+---@field ['Stagger Dagger Seconds Conversion'] float
+---@field ['Stagger WAP Conversion'] float
+---@field ['Stagger Disease Mult'] float
+---@field ['Stagger Ultra Damage'] float
+---@field MagicPoisonDegenBaseRate float
+---@field EnemyPityRateBase float
+---@field SupportedLanguages TArray<FString>
+---@field WeaponXPOrbAmount float
+---@field ['Berserk Fruit Duration'] float
+---@field ['Iron Fruit Duration'] float
+---@field MagicPoisonDegenResRate float
+---@field WoundRegenDelay float
+---@field WoundRegenRate float
+---@field B33PunchDuration float
+---@field B33PunchCooldown float
+---@field B33PunchRegen float
+---@field B33PunchDamageIncrease float
+---@field HealItemIncreaseOverTime_MaxMult float
+---@field HealItemIncreaseOverTime_HrsToMax float
+---@field ['Drop Chance Bonus Per Luck'] float
+---@field Fish_Luck float
+---@field WeaponUpgradeTypeCosts TMap<TSoftObjectPtr<UFS_ItemData_C>, int32>
+---@field ResourceConversionToGrimoireInk float
+---@field ResourceConversionToGrimoireInkWithUpgrade float
+---@field GrimoireInkRequirement float
+---@field EnergyCellErrorRegenerationDelay float
+---@field SecretUltraRegen float
+---@field MagicRotResistDuration float
+---@field MagicRotResistAmount float
+---@field SecretWallUpdateFixGUID FGuid
+local UPlayerBalance_C = {}
+
+---@param Count int32
+---@param Bonus float
+---@param FullMultiplier float
+function UPlayerBalance_C:GetChargeConsumptionBonus(Count, Bonus, FullMultiplier) end
+
+---@param Left EFS_WeaponDamageTypeDisplay
+---@param Right EFS_WeaponDamageTypeDisplay
+---@param _ boolean
+---@param Text FText
+function UPlayerBalance_C:GetCombinedDamageTypeText(Left, Right, _, Text) end
+
+---@param MaxLevel int32
+function UPlayerBalance_C:GetMaxLevel(MaxLevel) end
+
+---@param Display EFS_WeaponDamageTypeDisplay
+---@param Text FText
+function UPlayerBalance_C:GetWeaponDamageTypeText(Display, Text) end
+
+---@param Level int32
+---@param XPRequirement int32
+---@param Max int32
+function UPlayerBalance_C:GetXPCurveAtLevel(Level, XPRequirement, Max) end

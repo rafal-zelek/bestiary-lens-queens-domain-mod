@@ -1,0 +1,30 @@
+---@meta
+
+---@class UAnimNotifyState_TimedNiagaraEffect : UAnimNotifyState
+---@field Template UNiagaraSystem
+---@field SocketName FName
+---@field LocationOffset FVector
+---@field RotationOffset FRotator
+---@field bDestroyAtEnd boolean
+local UAnimNotifyState_TimedNiagaraEffect = {}
+
+---@class UAnimNotifyState_TimedNiagaraEffectAdvanced : UAnimNotifyState_TimedNiagaraEffect
+local UAnimNotifyState_TimedNiagaraEffectAdvanced = {}
+
+---@class UAnimNotify_PlayNiagaraEffect : UAnimNotify
+---@field Template UNiagaraSystem
+---@field LocationOffset FVector
+---@field RotationOffset FRotator
+---@field Scale FVector
+---@field bAbsoluteScale boolean
+---@field Attached boolean
+---@field SocketName FName
+local UAnimNotify_PlayNiagaraEffect = {}
+
+---@param MeshComp UMeshComponent
+function UAnimNotifyState_TimedNiagaraEffect:GetSpawnedEffect(MeshComp) end
+
+---@param MeshComp UMeshComponent
+function UAnimNotifyState_TimedNiagaraEffectAdvanced:GetNotifyProgress(MeshComp) end
+
+function UAnimNotify_PlayNiagaraEffect:GetSpawnedEffect() end

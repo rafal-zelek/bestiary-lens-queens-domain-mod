@@ -1,0 +1,44 @@
+---@meta
+
+---@class UWhaleKing_Config_C : UPrimaryDataAsset
+---@field TurnInPlace_MotionValue float
+---@field ['ChinSlamHitbox MotionValue'] float
+---@field ['ChinSlamWave MotionValue'] float
+---@field ['ChinSlamWave PoisonChance'] float
+---@field ['Bite MotionValue'] float
+---@field ['StompHitbox MotionValue'] float
+---@field ['StompAOE MotionValue'] float
+---@field ['TailSlams MotionValue'] float
+---@field ['TailSlams TurnSpeed'] float
+---@field PoisonRingContact_MotionValue float
+---@field PoisonRing_PoisonChance float
+---@field Laser_MotionValue float
+---@field Laser_PoisonChance float
+---@field WalkTowardsPlayerWeight TArray<float>
+---@field ['Chin Slam Weights'] TArray<float>
+---@field ['Stomp Weights'] TArray<float>
+---@field ['Tail Slam Weights'] TArray<float>
+---@field ['Bite Weights'] TArray<float>
+---@field ['Laser Weights'] TArray<float>
+---@field StompRange float
+---@field BiteMaxRange float
+---@field TailSlapsMaxRange float
+---@field LaserMinRange float
+---@field ['BellySlide Cooldown'] float
+---@field ['BellySlide Cooldown Final Phase'] float
+---@field TurnAroundCooldown float
+---@field ['Leg Health Increase Per Knockdown'] float
+---@field ['Leg Health'] float
+---@field ['Horn Health'] float
+---@field ['Horn Break Damage'] float
+---@field ['Leg Knockdown Duration'] float
+---@field ['Leg Knockdown Duration Post Horn Break'] float
+---@field SingleStompWeight float
+---@field DoubleStompWeight float
+---@field TripleStompWeight float
+---@field BellySlideVortexForceMaxStrength float
+---@field BellySlideVortexForceRotationalRatio float
+---@field FishTotalSpawnCounts TArray<int32>
+---@field FishSpawnCountPerAnimLoops TArray<int32>
+---@field FishSpawnAnimLoopSpeed TArray<float>
+local UWhaleKing_Config_C = {}

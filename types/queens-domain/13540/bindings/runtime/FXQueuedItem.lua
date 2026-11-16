@@ -1,0 +1,8 @@
+---@meta
+
+---@class FFXQueuedItem
+---@field VFX_3_2BDFE552469BEC3607001BB201A90F7E UNiagaraSystem
+---@field SFX_6_74C69F764964BC772A3EE7A71875131B USoundCue
+---@field ScreenEffects_12_507913D442E313E26D27C686204C1518 UStatusEffectVisBase_C
+---@field name_15_B1F7C746458715E1A1AE32830B9B4BC7 FName
+local FFXQueuedItem = {}

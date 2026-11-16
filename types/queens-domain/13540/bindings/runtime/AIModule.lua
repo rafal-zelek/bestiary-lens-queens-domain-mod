@@ -1,0 +1,2033 @@
+---@meta
+
+---@class AAIController : AController
+---@field bStartAILogicOnPossess boolean
+---@field bStopAILogicOnUnposses boolean
+---@field bLOSflag boolean
+---@field bSkipExtraLOSChecks boolean
+---@field bAllowStrafe boolean
+---@field bWantsPlayerState boolean
+---@field bSetControlRotationFromPawnOrientation boolean
+---@field PathFollowingComponent UPathFollowingComponent
+---@field BrainComponent UBrainComponent
+---@field PerceptionComponent UAIPerceptionComponent
+---@field ActionsComp UPawnActionsComponent
+---@field Blackboard UBlackboardComponent
+---@field CachedGameplayTasksComponent UGameplayTasksComponent
+---@field DefaultNavigationFilterClass TSubclassOf<UNavigationQueryFilter>
+---@field ReceiveMoveCompleted FAIControllerReceiveMoveCompleted
+local AAIController = {}
+
+---@class ADetourCrowdAIController : AAIController
+local ADetourCrowdAIController = {}
+
+---@class AEQSTestingPawn : ACharacter
+---@field QueryTemplate UEnvQuery
+---@field QueryParams TArray<FEnvNamedValue>
+---@field QueryConfig TArray<FAIDynamicParam>
+---@field TimeLimitPerStep float
+---@field StepToDebugDraw int32
+---@field HighlightMode EEnvQueryHightlightMode
+---@field bDrawLabels boolean
+---@field bDrawFailedItems boolean
+---@field bReRunQueryOnlyOnFinishedMove boolean
+---@field bShouldBeVisibleInGame boolean
+---@field bTickDuringGame boolean
+---@field QueryingMode EEnvQueryRunMode::Type
+---@field NavAgentProperties FNavAgentProperties
+local AEQSTestingPawn = {}
+
+---@class AGridPathAIController : AAIController
+local AGridPathAIController = {}
+
+---@class ANavLinkProxy : AActor
+---@field PointLinks TArray<FNavigationLink>
+---@field SegmentLinks TArray<FNavigationSegmentLink>
+---@field SmartLinkComp UNavLinkCustomComponent
+---@field bSmartLinkIsRelevant boolean
+---@field OnSmartLinkReached FNavLinkProxyOnSmartLinkReached
+local ANavLinkProxy = {}
+
+---@class FAIDamageEvent
+---@field Amount float
+---@field Location FVector
+---@field HitLocation FVector
+---@field DamagedActor AActor
+---@field Instigator AActor
+---@field Tag FName
+local FAIDamageEvent = {}
+
+---@class FAIDataProviderBoolValue : FAIDataProviderTypedValue
+---@field DefaultValue boolean
+local FAIDataProviderBoolValue = {}
+
+---@class FAIDataProviderFloatValue : FAIDataProviderTypedValue
+---@field DefaultValue float
+local FAIDataProviderFloatValue = {}
+
+---@class FAIDataProviderIntValue : FAIDataProviderTypedValue
+---@field DefaultValue int32
+local FAIDataProviderIntValue = {}
+
+---@class FAIDataProviderStructValue : FAIDataProviderValue
+local FAIDataProviderStructValue = {}
+
+---@class FAIDataProviderTypedValue : FAIDataProviderValue
+---@field PropertyType UClass
+local FAIDataProviderTypedValue = {}
+
+---@class FAIDataProviderValue
+---@field DataBinding UAIDataProvider
+---@field DataField FName
+local FAIDataProviderValue = {}
+
+---@class FAIDynamicParam
+---@field ParamName FName
+---@field ParamType EAIParamType
+---@field Value float
+---@field BBKey FBlackboardKeySelector
+local FAIDynamicParam = {}
+
+---@class FAIMoveRequest
+---@field GoalActor AActor
+local FAIMoveRequest = {}
+
+---@class FAINoiseEvent
+---@field NoiseLocation FVector
+---@field Loudness float
+---@field MaxRange float
+---@field Instigator AActor
+---@field Tag FName
+local FAINoiseEvent = {}
+
+---@class FAIPredictionEvent
+---@field Requestor AActor
+---@field PredictedActor AActor
+local FAIPredictionEvent = {}
+
+---@class FAIRequestID
+---@field RequestID uint32
+local FAIRequestID = {}
+
+---@class FAISenseAffiliationFilter
+---@field bDetectEnemies boolean
+---@field bDetectNeutrals boolean
+---@field bDetectFriendlies boolean
+local FAISenseAffiliationFilter = {}
+
+---@class FAISightEvent
+---@field SeenActor AActor
+---@field Observer AActor
+local FAISightEvent = {}
+
+---@class FAIStimulus
+---@field Age float
+---@field ExpirationAge float
+---@field Strength float
+---@field StimulusLocation FVector
+---@field ReceiverLocation FVector
+---@field Tag FName
+---@field bSuccessfullySensed boolean
+local FAIStimulus = {}
+
+---@class FAITeamStimulusEvent
+---@field Broadcaster AActor
+---@field Enemy AActor
+local FAITeamStimulusEvent = {}
+
+---@class FAITouchEvent
+---@field TouchReceiver AActor
+---@field OtherActor AActor
+local FAITouchEvent = {}
+
+---@class FActorPerceptionBlueprintInfo
+---@field Target AActor
+---@field LastSensedStimuli TArray<FAIStimulus>
+---@field bIsHostile boolean
+local FActorPerceptionBlueprintInfo = {}
+
+---@class FActorPerceptionUpdateInfo
+---@field TargetId int32
+---@field Target TWeakObjectPtr<AActor>
+---@field Stimulus FAIStimulus
+local FActorPerceptionUpdateInfo = {}
+
+---@class FBTCompositeChild
+---@field ChildComposite UBTCompositeNode
+---@field ChildTask UBTTaskNode
+---@field Decorators TArray<UBTDecorator>
+---@field DecoratorOps TArray<FBTDecoratorLogic>
+local FBTCompositeChild = {}
+
+---@class FBTDecoratorLogic
+---@field Operation EBTDecoratorLogic::Type
+---@field Number uint16
+local FBTDecoratorLogic = {}
+
+---@class FBehaviorTreeTemplateInfo
+---@field Asset UBehaviorTree
+---@field Template UBTCompositeNode
+local FBehaviorTreeTemplateInfo = {}
+
+---@class FBlackboardEntry
+---@field EntryName FName
+---@field KeyType UBlackboardKeyType
+---@field bInstanceSynced boolean
+local FBlackboardEntry = {}
+
+---@class FBlackboardKeySelector
+---@field AllowedTypes TArray<UBlackboardKeyType>
+---@field SelectedKeyName FName
+---@field SelectedKeyType TSubclassOf<UBlackboardKeyType>
+---@field SelectedKeyID uint8
+---@field bNoneIsAllowedValue boolean
+local FBlackboardKeySelector = {}
+
+---@class FCrowdAvoidanceConfig
+---@field VelocityBias float
+---@field DesiredVelocityWeight float
+---@field CurrentVelocityWeight float
+---@field SideBiasWeight float
+---@field ImpactTimeWeight float
+---@field ImpactTimeRange float
+---@field CustomPatternIdx uint8
+---@field AdaptiveDivisions uint8
+---@field AdaptiveRings uint8
+---@field AdaptiveDepth uint8
+local FCrowdAvoidanceConfig = {}
+
+---@class FCrowdAvoidanceSamplingPattern
+---@field Angles TArray<float>
+---@field Radii TArray<float>
+local FCrowdAvoidanceSamplingPattern = {}
+
+---@class FDefault__AISenseBlueprintListener
+local FDefault__AISenseBlueprintListener = {}
+
+---@class FEQSParametrizedQueryExecutionRequest
+---@field QueryTemplate UEnvQuery
+---@field QueryConfig TArray<FAIDynamicParam>
+---@field EQSQueryBlackboardKey FBlackboardKeySelector
+---@field RunMode EEnvQueryRunMode::Type
+---@field bUseBBKeyForQueryTemplate boolean
+local FEQSParametrizedQueryExecutionRequest = {}
+
+---@class FEnvDirection
+---@field LineFrom TSubclassOf<UEnvQueryContext>
+---@field LineTo TSubclassOf<UEnvQueryContext>
+---@field Rotation TSubclassOf<UEnvQueryContext>
+---@field DirMode EEnvDirection::Type
+local FEnvDirection = {}
+
+---@class FEnvNamedValue
+---@field ParamName FName
+---@field ParamType EAIParamType
+---@field Value float
+local FEnvNamedValue = {}
+
+---@class FEnvOverlapData
+---@field ExtentX float
+---@field ExtentY float
+---@field ExtentZ float
+---@field ShapeOffset FVector
+---@field OverlapChannel ECollisionChannel
+---@field OverlapShape EEnvOverlapShape::Type
+---@field bOnlyBlockingHits boolean
+---@field bOverlapComplex boolean
+---@field bSkipOverlapQuerier boolean
+local FEnvOverlapData = {}
+
+---@class FEnvQueryInstanceCache
+---@field Template UEnvQuery
+local FEnvQueryInstanceCache = {}
+
+---@class FEnvQueryRequest
+---@field QueryTemplate UEnvQuery
+---@field Owner UObject
+---@field World UWorld
+local FEnvQueryRequest = {}
+
+---@class FEnvQueryResult
+---@field ItemType TSubclassOf<UEnvQueryItemType>
+---@field OptionIndex int32
+---@field QueryID int32
+local FEnvQueryResult = {}
+
+---@class FEnvTraceData
+---@field VersionNum int32
+---@field NavigationFilter TSubclassOf<UNavigationQueryFilter>
+---@field ProjectDown float
+---@field ProjectUp float
+---@field ExtentX float
+---@field ExtentY float
+---@field ExtentZ float
+---@field PostProjectionVerticalOffset float
+---@field TraceChannel ETraceTypeQuery
+---@field SerializedChannel ECollisionChannel
+---@field TraceShape EEnvTraceShape::Type
+---@field TraceMode EEnvQueryTrace::Type
+---@field bTraceComplex boolean
+---@field bOnlyBlockingHits boolean
+---@field bCanTraceOnNavMesh boolean
+---@field bCanTraceOnGeometry boolean
+---@field bCanDisableTrace boolean
+---@field bCanProjectDown boolean
+local FEnvTraceData = {}
+
+---@class FGenericTeamId
+---@field TeamID uint8
+local FGenericTeamId = {}
+
+---@class FIntervalCountdown
+---@field Interval float
+local FIntervalCountdown = {}
+
+---@class FPawnActionEvent
+---@field Action UPawnAction
+local FPawnActionEvent = {}
+
+---@class FPawnActionStack
+---@field TopAction UPawnAction
+local FPawnActionStack = {}
+
+---@class FRecastGraphWrapper
+---@field RecastNavMeshActor ARecastNavMesh
+local FRecastGraphWrapper = {}
+
+---@class IAIPerceptionListenerInterface : IInterface
+local IAIPerceptionListenerInterface = {}
+
+---@class IAIResourceInterface : IInterface
+local IAIResourceInterface = {}
+
+---@class IAISightTargetInterface : IInterface
+local IAISightTargetInterface = {}
+
+---@class IBlackboardAssetProvider : IInterface
+local IBlackboardAssetProvider = {}
+
+---@class ICrowdAgentInterface : IInterface
+local ICrowdAgentInterface = {}
+
+---@class IEQSQueryResultSourceInterface : IInterface
+local IEQSQueryResultSourceInterface = {}
+
+---@class IGenericTeamAgentInterface : IInterface
+local IGenericTeamAgentInterface = {}
+
+---@class UAIAsyncTaskBlueprintProxy : UObject
+---@field OnSuccess FAIAsyncTaskBlueprintProxyOnSuccess
+---@field OnFail FAIAsyncTaskBlueprintProxyOnFail
+local UAIAsyncTaskBlueprintProxy = {}
+
+---@class UAIBlueprintHelperLibrary : UBlueprintFunctionLibrary
+local UAIBlueprintHelperLibrary = {}
+
+---@class UAIDataProvider : UObject
+local UAIDataProvider = {}
+
+---@class UAIDataProvider_QueryParams : UAIDataProvider
+---@field ParamName FName
+---@field FloatValue float
+---@field IntValue int32
+---@field BoolValue boolean
+local UAIDataProvider_QueryParams = {}
+
+---@class UAIDataProvider_Random : UAIDataProvider_QueryParams
+---@field Min float
+---@field Max float
+---@field bInteger boolean
+local UAIDataProvider_Random = {}
+
+---@class UAIHotSpotManager : UObject
+local UAIHotSpotManager = {}
+
+---@class UAIPerceptionComponent : UActorComponent
+---@field SensesConfig TArray<UAISenseConfig>
+---@field DominantSense TSubclassOf<UAISense>
+---@field AIOwner AAIController
+---@field OnPerceptionUpdated FAIPerceptionComponentOnPerceptionUpdated
+---@field OnTargetPerceptionUpdated FAIPerceptionComponentOnTargetPerceptionUpdated
+---@field OnTargetPerceptionInfoUpdated FAIPerceptionComponentOnTargetPerceptionInfoUpdated
+local UAIPerceptionComponent = {}
+
+---@class UAIPerceptionStimuliSourceComponent : UActorComponent
+---@field bAutoRegisterAsSource boolean
+---@field RegisterAsSourceForSenses TArray<TSubclassOf<UAISense>>
+local UAIPerceptionStimuliSourceComponent = {}
+
+---@class UAIPerceptionSystem : UAISubsystem
+---@field Senses TArray<UAISense>
+---@field PerceptionAgingRate float
+local UAIPerceptionSystem = {}
+
+---@class UAIResource_Logic : UGameplayTaskResource
+local UAIResource_Logic = {}
+
+---@class UAIResource_Movement : UGameplayTaskResource
+local UAIResource_Movement = {}
+
+---@class UAISense : UObject
+---@field DefaultExpirationAge float
+---@field NotifyType EAISenseNotifyType
+---@field bWantsNewPawnNotification boolean
+---@field bAutoRegisterAllPawnsAsSources boolean
+---@field PerceptionSystemInstance UAIPerceptionSystem
+local UAISense = {}
+
+---@class UAISenseBlueprintListener : UUserDefinedStruct
+local UAISenseBlueprintListener = {}
+
+---@class UAISenseConfig : UObject
+---@field DebugColor FColor
+---@field MaxAge float
+---@field bStartsEnabled boolean
+local UAISenseConfig = {}
+
+---@class UAISenseConfig_Blueprint : UAISenseConfig
+---@field Implementation TSubclassOf<UAISense_Blueprint>
+local UAISenseConfig_Blueprint = {}
+
+---@class UAISenseConfig_Damage : UAISenseConfig
+---@field Implementation TSubclassOf<UAISense_Damage>
+local UAISenseConfig_Damage = {}
+
+---@class UAISenseConfig_Hearing : UAISenseConfig
+---@field Implementation TSubclassOf<UAISense_Hearing>
+---@field HearingRange float
+---@field LoSHearingRange float
+---@field bUseLoSHearing boolean
+---@field DetectionByAffiliation FAISenseAffiliationFilter
+local UAISenseConfig_Hearing = {}
+
+---@class UAISenseConfig_Prediction : UAISenseConfig
+local UAISenseConfig_Prediction = {}
+
+---@class UAISenseConfig_Sight : UAISenseConfig
+---@field Implementation TSubclassOf<UAISense_Sight>
+---@field SightRadius float
+---@field LoseSightRadius float
+---@field PeripheralVisionAngleDegrees float
+---@field DetectionByAffiliation FAISenseAffiliationFilter
+---@field AutoSuccessRangeFromLastSeenLocation float
+---@field PointOfViewBackwardOffset float
+---@field NearClippingRadius float
+local UAISenseConfig_Sight = {}
+
+---@class UAISenseConfig_Team : UAISenseConfig
+local UAISenseConfig_Team = {}
+
+---@class UAISenseConfig_Touch : UAISenseConfig
+local UAISenseConfig_Touch = {}
+
+---@class UAISenseEvent : UObject
+local UAISenseEvent = {}
+
+---@class UAISenseEvent_Damage : UAISenseEvent
+---@field Event FAIDamageEvent
+local UAISenseEvent_Damage = {}
+
+---@class UAISenseEvent_Hearing : UAISenseEvent
+---@field Event FAINoiseEvent
+local UAISenseEvent_Hearing = {}
+
+---@class UAISense_Blueprint : UAISense
+---@field ListenerDataType TSubclassOf<UUserDefinedStruct>
+---@field ListenerContainer TArray<UAIPerceptionComponent>
+---@field UnprocessedEvents TArray<UAISenseEvent>
+local UAISense_Blueprint = {}
+
+---@class UAISense_Damage : UAISense
+---@field RegisteredEvents TArray<FAIDamageEvent>
+local UAISense_Damage = {}
+
+---@class UAISense_Hearing : UAISense
+---@field NoiseEvents TArray<FAINoiseEvent>
+---@field SpeedOfSoundSq float
+local UAISense_Hearing = {}
+
+---@class UAISense_Prediction : UAISense
+---@field RegisteredEvents TArray<FAIPredictionEvent>
+local UAISense_Prediction = {}
+
+---@class UAISense_Sight : UAISense
+---@field MaxTracesPerTick int32
+---@field MinQueriesPerTimeSliceCheck int32
+---@field MaxTimeSlicePerTick double
+---@field HighImportanceQueryDistanceThreshold float
+---@field MaxQueryImportance float
+---@field SightLimitQueryImportance float
+local UAISense_Sight = {}
+
+---@class UAISense_Team : UAISense
+---@field RegisteredEvents TArray<FAITeamStimulusEvent>
+local UAISense_Team = {}
+
+---@class UAISense_Touch : UAISense
+---@field RegisteredEvents TArray<FAITouchEvent>
+local UAISense_Touch = {}
+
+---@class UAISubsystem : UObject
+---@field AISystem UAISystem
+local UAISubsystem = {}
+
+---@class UAISystem : UAISystemBase
+---@field PerceptionSystemClassName FSoftClassPath
+---@field HotSpotManagerClassName FSoftClassPath
+---@field AcceptanceRadius float
+---@field PathfollowingRegularPathPointAcceptanceRadius float
+---@field PathfollowingNavLinkAcceptanceRadius float
+---@field bFinishMoveOnGoalOverlap boolean
+---@field bAcceptPartialPaths boolean
+---@field bAllowStrafing boolean
+---@field bEnableBTAITasks boolean
+---@field bAllowControllersAsEQSQuerier boolean
+---@field bEnableDebuggerPlugin boolean
+---@field bForgetStaleActors boolean
+---@field bAddBlackboardSelfKey boolean
+---@field DefaultSightCollisionChannel ECollisionChannel
+---@field BehaviorTreeManager UBehaviorTreeManager
+---@field EnvironmentQueryManager UEnvQueryManager
+---@field PerceptionSystem UAIPerceptionSystem
+---@field AllProxyObjects TArray<UAIAsyncTaskBlueprintProxy>
+---@field HotSpotManager UAIHotSpotManager
+---@field NavLocalGrids UNavLocalGridManager
+local UAISystem = {}
+
+---@class UAITask : UGameplayTask
+---@field OwnerController AAIController
+local UAITask = {}
+
+---@class UAITask_LockLogic : UAITask
+local UAITask_LockLogic = {}
+
+---@class UAITask_MoveTo : UAITask
+---@field OnRequestFailed FAITask_MoveToOnRequestFailed
+---@field OnRequestUpdated FAITask_MoveToOnRequestUpdated
+---@field OnMoveFinished FAITask_MoveToOnMoveFinished
+---@field MoveRequest FAIMoveRequest
+local UAITask_MoveTo = {}
+
+---@class UAITask_RunEQS : UAITask
+local UAITask_RunEQS = {}
+
+---@class UBTAuxiliaryNode : UBTNode
+local UBTAuxiliaryNode = {}
+
+---@class UBTCompositeNode : UBTNode
+---@field Children TArray<FBTCompositeChild>
+---@field Services TArray<UBTService>
+---@field bApplyDecoratorScope boolean
+local UBTCompositeNode = {}
+
+---@class UBTComposite_Selector : UBTCompositeNode
+local UBTComposite_Selector = {}
+
+---@class UBTComposite_Sequence : UBTCompositeNode
+local UBTComposite_Sequence = {}
+
+---@class UBTComposite_SimpleParallel : UBTCompositeNode
+---@field FinishMode EBTParallelMode::Type
+local UBTComposite_SimpleParallel = {}
+
+---@class UBTDecorator : UBTAuxiliaryNode
+---@field bInverseCondition boolean
+---@field FlowAbortMode EBTFlowAbortMode::Type
+local UBTDecorator = {}
+
+---@class UBTDecorator_Blackboard : UBTDecorator_BlackboardBase
+---@field IntValue int32
+---@field FloatValue float
+---@field StringValue FString
+---@field CachedDescription FString
+---@field OperationType uint8
+---@field NotifyObserver EBTBlackboardRestart::Type
+local UBTDecorator_Blackboard = {}
+
+---@class UBTDecorator_BlackboardBase : UBTDecorator
+---@field BlackboardKey FBlackboardKeySelector
+local UBTDecorator_BlackboardBase = {}
+
+---@class UBTDecorator_BlueprintBase : UBTDecorator
+---@field AIOwner AAIController
+---@field ActorOwner AActor
+---@field ObservedKeyNames TArray<FName>
+---@field bShowPropertyDetails boolean
+---@field bCheckConditionOnlyBlackBoardChanges boolean
+---@field bIsObservingBB boolean
+local UBTDecorator_BlueprintBase = {}
+
+---@class UBTDecorator_CheckGameplayTagsOnActor : UBTDecorator
+---@field ActorToCheck FBlackboardKeySelector
+---@field TagsToMatch EGameplayContainerMatchType
+---@field GameplayTags FGameplayTagContainer
+---@field CachedDescription FString
+local UBTDecorator_CheckGameplayTagsOnActor = {}
+
+---@class UBTDecorator_CompareBBEntries : UBTDecorator
+---@field Operator EBlackBoardEntryComparison::Type
+---@field BlackboardKeyA FBlackboardKeySelector
+---@field BlackboardKeyB FBlackboardKeySelector
+local UBTDecorator_CompareBBEntries = {}
+
+---@class UBTDecorator_ConditionalLoop : UBTDecorator_Blackboard
+local UBTDecorator_ConditionalLoop = {}
+
+---@class UBTDecorator_ConeCheck : UBTDecorator
+---@field ConeHalfAngle float
+---@field ConeOrigin FBlackboardKeySelector
+---@field ConeDirection FBlackboardKeySelector
+---@field Observed FBlackboardKeySelector
+local UBTDecorator_ConeCheck = {}
+
+---@class UBTDecorator_Cooldown : UBTDecorator
+---@field CooldownTime float
+local UBTDecorator_Cooldown = {}
+
+---@class UBTDecorator_DoesPathExist : UBTDecorator
+---@field BlackboardKeyA FBlackboardKeySelector
+---@field BlackboardKeyB FBlackboardKeySelector
+---@field bUseSelf boolean
+---@field PathQueryType EPathExistanceQueryType::Type
+---@field FilterClass TSubclassOf<UNavigationQueryFilter>
+local UBTDecorator_DoesPathExist = {}
+
+---@class UBTDecorator_ForceSuccess : UBTDecorator
+local UBTDecorator_ForceSuccess = {}
+
+---@class UBTDecorator_IsAtLocation : UBTDecorator_BlackboardBase
+---@field AcceptableRadius float
+---@field ParametrizedAcceptableRadius FAIDataProviderFloatValue
+---@field GeometricDistanceType FAIDistanceType
+---@field bUseParametrizedRadius boolean
+---@field bUseNavAgentGoalLocation boolean
+---@field bPathFindingBasedTest boolean
+local UBTDecorator_IsAtLocation = {}
+
+---@class UBTDecorator_IsBBEntryOfClass : UBTDecorator_BlackboardBase
+---@field TestClass UClass
+local UBTDecorator_IsBBEntryOfClass = {}
+
+---@class UBTDecorator_KeepInCone : UBTDecorator
+---@field ConeHalfAngle float
+---@field ConeOrigin FBlackboardKeySelector
+---@field Observed FBlackboardKeySelector
+---@field bUseSelfAsOrigin boolean
+---@field bUseSelfAsObserved boolean
+local UBTDecorator_KeepInCone = {}
+
+---@class UBTDecorator_Loop : UBTDecorator
+---@field NumLoops int32
+---@field bInfiniteLoop boolean
+---@field InfiniteLoopTimeoutTime float
+local UBTDecorator_Loop = {}
+
+---@class UBTDecorator_ReachedMoveGoal : UBTDecorator
+local UBTDecorator_ReachedMoveGoal = {}
+
+---@class UBTDecorator_SetTagCooldown : UBTDecorator
+---@field CooldownTag FGameplayTag
+---@field CooldownDuration float
+---@field bAddToExistingDuration boolean
+local UBTDecorator_SetTagCooldown = {}
+
+---@class UBTDecorator_TagCooldown : UBTDecorator
+---@field CooldownTag FGameplayTag
+---@field CooldownDuration float
+---@field bAddToExistingDuration boolean
+---@field bActivatesCooldown boolean
+local UBTDecorator_TagCooldown = {}
+
+---@class UBTDecorator_TimeLimit : UBTDecorator
+---@field TimeLimit float
+local UBTDecorator_TimeLimit = {}
+
+---@class UBTFunctionLibrary : UBlueprintFunctionLibrary
+local UBTFunctionLibrary = {}
+
+---@class UBTNode : UObject
+---@field NodeName FString
+---@field TreeAsset UBehaviorTree
+---@field ParentNode UBTCompositeNode
+local UBTNode = {}
+
+---@class UBTService : UBTAuxiliaryNode
+---@field Interval float
+---@field RandomDeviation float
+---@field bCallTickOnSearchStart boolean
+---@field bRestartTimerOnEachActivation boolean
+local UBTService = {}
+
+---@class UBTService_BlackboardBase : UBTService
+---@field BlackboardKey FBlackboardKeySelector
+local UBTService_BlackboardBase = {}
+
+---@class UBTService_BlueprintBase : UBTService
+---@field AIOwner AAIController
+---@field ActorOwner AActor
+---@field bShowPropertyDetails boolean
+---@field bShowEventDetails boolean
+local UBTService_BlueprintBase = {}
+
+---@class UBTService_DefaultFocus : UBTService_BlackboardBase
+---@field FocusPriority uint8
+local UBTService_DefaultFocus = {}
+
+---@class UBTService_RunEQS : UBTService_BlackboardBase
+---@field EQSRequest FEQSParametrizedQueryExecutionRequest
+local UBTService_RunEQS = {}
+
+---@class UBTTaskNode : UBTNode
+---@field Services TArray<UBTService>
+---@field bIgnoreRestartSelf boolean
+local UBTTaskNode = {}
+
+---@class UBTTask_BlackboardBase : UBTTaskNode
+---@field BlackboardKey FBlackboardKeySelector
+local UBTTask_BlackboardBase = {}
+
+---@class UBTTask_BlueprintBase : UBTTaskNode
+---@field AIOwner AAIController
+---@field ActorOwner AActor
+---@field TickInterval FIntervalCountdown
+---@field bShowPropertyDetails boolean
+local UBTTask_BlueprintBase = {}
+
+---@class UBTTask_FinishWithResult : UBTTaskNode
+---@field Result EBTNodeResult::Type
+local UBTTask_FinishWithResult = {}
+
+---@class UBTTask_GameplayTaskBase : UBTTaskNode
+---@field bWaitForGameplayTask boolean
+local UBTTask_GameplayTaskBase = {}
+
+---@class UBTTask_MakeNoise : UBTTaskNode
+---@field Loudnes float
+local UBTTask_MakeNoise = {}
+
+---@class UBTTask_MoveDirectlyToward : UBTTask_MoveTo
+---@field bDisablePathUpdateOnGoalLocationChange boolean
+---@field bProjectVectorGoalToNavigation boolean
+---@field bUpdatedDeprecatedProperties boolean
+local UBTTask_MoveDirectlyToward = {}
+
+---@class UBTTask_MoveTo : UBTTask_BlackboardBase
+---@field AcceptableRadius float
+---@field FilterClass TSubclassOf<UNavigationQueryFilter>
+---@field ObservedBlackboardValueTolerance float
+---@field bObserveBlackboardValue boolean
+---@field bAllowStrafe boolean
+---@field bAllowPartialPath boolean
+---@field bTrackMovingGoal boolean
+---@field bProjectGoalLocation boolean
+---@field bReachTestIncludesAgentRadius boolean
+---@field bReachTestIncludesGoalRadius boolean
+---@field bStopOnOverlap boolean
+---@field bStopOnOverlapNeedsUpdate boolean
+local UBTTask_MoveTo = {}
+
+---@class UBTTask_PawnActionBase : UBTTaskNode
+local UBTTask_PawnActionBase = {}
+
+---@class UBTTask_PlayAnimation : UBTTaskNode
+---@field AnimationToPlay UAnimationAsset
+---@field bLooping boolean
+---@field bNonBlocking boolean
+---@field MyOwnerComp UBehaviorTreeComponent
+---@field CachedSkelMesh USkeletalMeshComponent
+local UBTTask_PlayAnimation = {}
+
+---@class UBTTask_PlaySound : UBTTaskNode
+---@field SoundToPlay USoundCue
+local UBTTask_PlaySound = {}
+
+---@class UBTTask_PushPawnAction : UBTTask_PawnActionBase
+---@field Action UPawnAction
+local UBTTask_PushPawnAction = {}
+
+---@class UBTTask_RotateToFaceBBEntry : UBTTask_BlackboardBase
+---@field Precision float
+local UBTTask_RotateToFaceBBEntry = {}
+
+---@class UBTTask_RunBehavior : UBTTaskNode
+---@field BehaviorAsset UBehaviorTree
+local UBTTask_RunBehavior = {}
+
+---@class UBTTask_RunBehaviorDynamic : UBTTaskNode
+---@field InjectionTag FGameplayTag
+---@field DefaultBehaviorAsset UBehaviorTree
+---@field BehaviorAsset UBehaviorTree
+local UBTTask_RunBehaviorDynamic = {}
+
+---@class UBTTask_RunEQSQuery : UBTTask_BlackboardBase
+---@field QueryTemplate UEnvQuery
+---@field QueryParams TArray<FEnvNamedValue>
+---@field QueryConfig TArray<FAIDynamicParam>
+---@field RunMode EEnvQueryRunMode::Type
+---@field EQSQueryBlackboardKey FBlackboardKeySelector
+---@field bUseBBKey boolean
+---@field EQSRequest FEQSParametrizedQueryExecutionRequest
+local UBTTask_RunEQSQuery = {}
+
+---@class UBTTask_SetTagCooldown : UBTTaskNode
+---@field CooldownTag FGameplayTag
+---@field bAddToExistingDuration boolean
+---@field CooldownDuration float
+local UBTTask_SetTagCooldown = {}
+
+---@class UBTTask_Wait : UBTTaskNode
+---@field WaitTime float
+---@field RandomDeviation float
+local UBTTask_Wait = {}
+
+---@class UBTTask_WaitBlackboardTime : UBTTask_Wait
+---@field BlackboardKey FBlackboardKeySelector
+local UBTTask_WaitBlackboardTime = {}
+
+---@class UBehaviorTree : UObject
+---@field RootNode UBTCompositeNode
+---@field BlackboardAsset UBlackboardData
+---@field RootDecorators TArray<UBTDecorator>
+---@field RootDecoratorOps TArray<FBTDecoratorLogic>
+local UBehaviorTree = {}
+
+---@class UBehaviorTreeComponent : UBrainComponent
+---@field NodeInstances TArray<UBTNode>
+---@field DefaultBehaviorTreeAsset UBehaviorTree
+local UBehaviorTreeComponent = {}
+
+---@class UBehaviorTreeManager : UObject
+---@field MaxDebuggerSteps int32
+---@field LoadedTemplates TArray<FBehaviorTreeTemplateInfo>
+---@field ActiveComponents TArray<UBehaviorTreeComponent>
+local UBehaviorTreeManager = {}
+
+---@class UBehaviorTreeTypes : UObject
+local UBehaviorTreeTypes = {}
+
+---@class UBlackboardComponent : UActorComponent
+---@field BrainComp UBrainComponent
+---@field DefaultBlackboardAsset UBlackboardData
+---@field BlackboardAsset UBlackboardData
+---@field KeyInstances TArray<UBlackboardKeyType>
+local UBlackboardComponent = {}
+
+---@class UBlackboardData : UDataAsset
+---@field Parent UBlackboardData
+---@field Keys TArray<FBlackboardEntry>
+---@field bHasSynchronizedKeys boolean
+local UBlackboardData = {}
+
+---@class UBlackboardKeyType : UObject
+local UBlackboardKeyType = {}
+
+---@class UBlackboardKeyType_Bool : UBlackboardKeyType
+local UBlackboardKeyType_Bool = {}
+
+---@class UBlackboardKeyType_Class : UBlackboardKeyType
+---@field BaseClass UClass
+local UBlackboardKeyType_Class = {}
+
+---@class UBlackboardKeyType_Enum : UBlackboardKeyType
+---@field EnumType UEnum
+---@field EnumName FString
+---@field bIsEnumNameValid boolean
+local UBlackboardKeyType_Enum = {}
+
+---@class UBlackboardKeyType_Float : UBlackboardKeyType
+local UBlackboardKeyType_Float = {}
+
+---@class UBlackboardKeyType_Int : UBlackboardKeyType
+local UBlackboardKeyType_Int = {}
+
+---@class UBlackboardKeyType_Name : UBlackboardKeyType
+local UBlackboardKeyType_Name = {}
+
+---@class UBlackboardKeyType_NativeEnum : UBlackboardKeyType
+---@field EnumName FString
+---@field EnumType UEnum
+local UBlackboardKeyType_NativeEnum = {}
+
+---@class UBlackboardKeyType_Object : UBlackboardKeyType
+---@field BaseClass UClass
+local UBlackboardKeyType_Object = {}
+
+---@class UBlackboardKeyType_Rotator : UBlackboardKeyType
+local UBlackboardKeyType_Rotator = {}
+
+---@class UBlackboardKeyType_String : UBlackboardKeyType
+---@field StringValue FString
+local UBlackboardKeyType_String = {}
+
+---@class UBlackboardKeyType_Vector : UBlackboardKeyType
+local UBlackboardKeyType_Vector = {}
+
+---@class UBrainComponent : UActorComponent
+---@field BlackboardComp UBlackboardComponent
+---@field AIOwner AAIController
+local UBrainComponent = {}
+
+---@class UCrowdFollowingComponent : UPathFollowingComponent
+---@field CrowdAgentMoveDirection FVector
+local UCrowdFollowingComponent = {}
+
+---@class UCrowdManager : UCrowdManagerBase
+---@field MyNavData ANavigationData
+---@field AvoidanceConfig TArray<FCrowdAvoidanceConfig>
+---@field SamplingPatterns TArray<FCrowdAvoidanceSamplingPattern>
+---@field MaxAgents int32
+---@field MaxAgentRadius float
+---@field MaxAvoidedAgents int32
+---@field MaxAvoidedWalls int32
+---@field NavmeshCheckInterval float
+---@field PathOptimizationInterval float
+---@field SeparationDirClamp float
+---@field PathOffsetRadiusMultiplier float
+---@field bResolveCollisions boolean
+local UCrowdManager = {}
+
+---@class UEQSRenderingComponent : UPrimitiveComponent
+local UEQSRenderingComponent = {}
+
+---@class UEnvQuery : UDataAsset
+---@field QueryName FName
+---@field Options TArray<UEnvQueryOption>
+local UEnvQuery = {}
+
+---@class UEnvQueryContext : UObject
+local UEnvQueryContext = {}
+
+---@class UEnvQueryContext_BlueprintBase : UEnvQueryContext
+local UEnvQueryContext_BlueprintBase = {}
+
+---@class UEnvQueryContext_Item : UEnvQueryContext
+local UEnvQueryContext_Item = {}
+
+---@class UEnvQueryContext_Querier : UEnvQueryContext
+local UEnvQueryContext_Querier = {}
+
+---@class UEnvQueryDebugHelpers : UObject
+local UEnvQueryDebugHelpers = {}
+
+---@class UEnvQueryGenerator : UEnvQueryNode
+---@field OptionName FString
+---@field ItemType TSubclassOf<UEnvQueryItemType>
+---@field bAutoSortTests boolean
+local UEnvQueryGenerator = {}
+
+---@class UEnvQueryGenerator_ActorsOfClass : UEnvQueryGenerator
+---@field SearchedActorClass TSubclassOf<AActor>
+---@field GenerateOnlyActorsInRadius FAIDataProviderBoolValue
+---@field SearchRadius FAIDataProviderFloatValue
+---@field SearchCenter TSubclassOf<UEnvQueryContext>
+local UEnvQueryGenerator_ActorsOfClass = {}
+
+---@class UEnvQueryGenerator_BlueprintBase : UEnvQueryGenerator
+---@field GeneratorsActionDescription FText
+---@field Context TSubclassOf<UEnvQueryContext>
+---@field GeneratedItemType TSubclassOf<UEnvQueryItemType>
+local UEnvQueryGenerator_BlueprintBase = {}
+
+---@class UEnvQueryGenerator_Composite : UEnvQueryGenerator
+---@field Generators TArray<UEnvQueryGenerator>
+---@field bAllowDifferentItemTypes boolean
+---@field bHasMatchingItemType boolean
+---@field ForcedItemType TSubclassOf<UEnvQueryItemType>
+local UEnvQueryGenerator_Composite = {}
+
+---@class UEnvQueryGenerator_Cone : UEnvQueryGenerator_ProjectedPoints
+---@field AlignedPointsDistance FAIDataProviderFloatValue
+---@field ConeDegrees FAIDataProviderFloatValue
+---@field AngleStep FAIDataProviderFloatValue
+---@field Range FAIDataProviderFloatValue
+---@field CenterActor TSubclassOf<UEnvQueryContext>
+---@field bIncludeContextLocation boolean
+local UEnvQueryGenerator_Cone = {}
+
+---@class UEnvQueryGenerator_CurrentLocation : UEnvQueryGenerator
+---@field QueryContext TSubclassOf<UEnvQueryContext>
+local UEnvQueryGenerator_CurrentLocation = {}
+
+---@class UEnvQueryGenerator_Donut : UEnvQueryGenerator_ProjectedPoints
+---@field InnerRadius FAIDataProviderFloatValue
+---@field OuterRadius FAIDataProviderFloatValue
+---@field NumberOfRings FAIDataProviderIntValue
+---@field PointsPerRing FAIDataProviderIntValue
+---@field ArcDirection FEnvDirection
+---@field ArcAngle FAIDataProviderFloatValue
+---@field bUseSpiralPattern boolean
+---@field Center TSubclassOf<UEnvQueryContext>
+---@field bDefineArc boolean
+local UEnvQueryGenerator_Donut = {}
+
+---@class UEnvQueryGenerator_OnCircle : UEnvQueryGenerator_ProjectedPoints
+---@field CircleRadius FAIDataProviderFloatValue
+---@field SpaceBetween FAIDataProviderFloatValue
+---@field NumberOfPoints FAIDataProviderIntValue
+---@field PointOnCircleSpacingMethod EPointOnCircleSpacingMethod
+---@field ArcDirection FEnvDirection
+---@field ArcAngle FAIDataProviderFloatValue
+---@field AngleRadians float
+---@field CircleCenter TSubclassOf<UEnvQueryContext>
+---@field bIgnoreAnyContextActorsWhenGeneratingCircle boolean
+---@field CircleCenterZOffset FAIDataProviderFloatValue
+---@field TraceData FEnvTraceData
+---@field bDefineArc boolean
+local UEnvQueryGenerator_OnCircle = {}
+
+---@class UEnvQueryGenerator_PathingGrid : UEnvQueryGenerator_SimpleGrid
+---@field PathToItem FAIDataProviderBoolValue
+---@field NavigationFilter TSubclassOf<UNavigationQueryFilter>
+---@field ScanRangeMultiplier FAIDataProviderFloatValue
+local UEnvQueryGenerator_PathingGrid = {}
+
+---@class UEnvQueryGenerator_ProjectedPoints : UEnvQueryGenerator
+---@field ProjectionData FEnvTraceData
+local UEnvQueryGenerator_ProjectedPoints = {}
+
+---@class UEnvQueryGenerator_SimpleGrid : UEnvQueryGenerator_ProjectedPoints
+---@field GridSize FAIDataProviderFloatValue
+---@field SpaceBetween FAIDataProviderFloatValue
+---@field GenerateAround TSubclassOf<UEnvQueryContext>
+local UEnvQueryGenerator_SimpleGrid = {}
+
+---@class UEnvQueryInstanceBlueprintWrapper : UObject
+---@field QueryID int32
+---@field ItemType TSubclassOf<UEnvQueryItemType>
+---@field OptionIndex int32
+---@field OnQueryFinishedEvent FEnvQueryInstanceBlueprintWrapperOnQueryFinishedEvent
+local UEnvQueryInstanceBlueprintWrapper = {}
+
+---@class UEnvQueryItemType : UObject
+local UEnvQueryItemType = {}
+
+---@class UEnvQueryItemType_Actor : UEnvQueryItemType_ActorBase
+local UEnvQueryItemType_Actor = {}
+
+---@class UEnvQueryItemType_ActorBase : UEnvQueryItemType_VectorBase
+local UEnvQueryItemType_ActorBase = {}
+
+---@class UEnvQueryItemType_Direction : UEnvQueryItemType_VectorBase
+local UEnvQueryItemType_Direction = {}
+
+---@class UEnvQueryItemType_Point : UEnvQueryItemType_VectorBase
+local UEnvQueryItemType_Point = {}
+
+---@class UEnvQueryItemType_VectorBase : UEnvQueryItemType
+local UEnvQueryItemType_VectorBase = {}
+
+---@class UEnvQueryManager : UAISubsystem
+---@field InstanceCache TArray<FEnvQueryInstanceCache>
+---@field LocalContexts TArray<UEnvQueryContext>
+---@field GCShieldedWrappers TArray<UEnvQueryInstanceBlueprintWrapper>
+---@field MaxAllowedTestingTime float
+---@field bTestQueriesUsingBreadth boolean
+---@field QueryCountWarningThreshold int32
+---@field QueryCountWarningInterval double
+local UEnvQueryManager = {}
+
+---@class UEnvQueryNode : UObject
+---@field VerNum int32
+local UEnvQueryNode = {}
+
+---@class UEnvQueryOption : UObject
+---@field Generator UEnvQueryGenerator
+---@field Tests TArray<UEnvQueryTest>
+local UEnvQueryOption = {}
+
+---@class UEnvQueryTest : UEnvQueryNode
+---@field TestOrder int32
+---@field TestPurpose EEnvTestPurpose::Type
+---@field TestComment FString
+---@field MultipleContextFilterOp EEnvTestFilterOperator::Type
+---@field MultipleContextScoreOp EEnvTestScoreOperator::Type
+---@field FilterType EEnvTestFilterType::Type
+---@field BoolValue FAIDataProviderBoolValue
+---@field FloatValueMin FAIDataProviderFloatValue
+---@field FloatValueMax FAIDataProviderFloatValue
+---@field ScoringEquation EEnvTestScoreEquation::Type
+---@field ClampMinType EEnvQueryTestClamping::Type
+---@field ClampMaxType EEnvQueryTestClamping::Type
+---@field NormalizationType EEQSNormalizationType
+---@field ScoreClampMin FAIDataProviderFloatValue
+---@field ScoreClampMax FAIDataProviderFloatValue
+---@field ScoringFactor FAIDataProviderFloatValue
+---@field ReferenceValue FAIDataProviderFloatValue
+---@field bDefineReferenceValue boolean
+---@field bWorkOnFloatValues boolean
+local UEnvQueryTest = {}
+
+---@class UEnvQueryTest_Distance : UEnvQueryTest
+---@field TestMode EEnvTestDistance::Type
+---@field DistanceTo TSubclassOf<UEnvQueryContext>
+local UEnvQueryTest_Distance = {}
+
+---@class UEnvQueryTest_Dot : UEnvQueryTest
+---@field LineA FEnvDirection
+---@field LineB FEnvDirection
+---@field TestMode EEnvTestDot
+---@field bAbsoluteValue boolean
+local UEnvQueryTest_Dot = {}
+
+---@class UEnvQueryTest_GameplayTags : UEnvQueryTest
+---@field TagQueryToMatch FGameplayTagQuery
+---@field bUpdatedToUseQuery boolean
+---@field TagsToMatch EGameplayContainerMatchType
+---@field GameplayTags FGameplayTagContainer
+local UEnvQueryTest_GameplayTags = {}
+
+---@class UEnvQueryTest_Overlap : UEnvQueryTest
+---@field OverlapData FEnvOverlapData
+local UEnvQueryTest_Overlap = {}
+
+---@class UEnvQueryTest_Pathfinding : UEnvQueryTest
+---@field TestMode EEnvTestPathfinding::Type
+---@field Context TSubclassOf<UEnvQueryContext>
+---@field PathFromContext FAIDataProviderBoolValue
+---@field SkipUnreachable FAIDataProviderBoolValue
+---@field FilterClass TSubclassOf<UNavigationQueryFilter>
+local UEnvQueryTest_Pathfinding = {}
+
+---@class UEnvQueryTest_PathfindingBatch : UEnvQueryTest_Pathfinding
+---@field ScanRangeMultiplier FAIDataProviderFloatValue
+local UEnvQueryTest_PathfindingBatch = {}
+
+---@class UEnvQueryTest_Project : UEnvQueryTest
+---@field ProjectionData FEnvTraceData
+local UEnvQueryTest_Project = {}
+
+---@class UEnvQueryTest_Random : UEnvQueryTest
+local UEnvQueryTest_Random = {}
+
+---@class UEnvQueryTest_Trace : UEnvQueryTest
+---@field TraceData FEnvTraceData
+---@field TraceFromContext FAIDataProviderBoolValue
+---@field ItemHeightOffset FAIDataProviderFloatValue
+---@field ContextHeightOffset FAIDataProviderFloatValue
+---@field Context TSubclassOf<UEnvQueryContext>
+local UEnvQueryTest_Trace = {}
+
+---@class UEnvQueryTest_Volume : UEnvQueryTest
+---@field VolumeContext TSubclassOf<UEnvQueryContext>
+---@field VolumeClass TSubclassOf<AVolume>
+---@field bDoComplexVolumeTest boolean
+local UEnvQueryTest_Volume = {}
+
+---@class UEnvQueryTypes : UObject
+local UEnvQueryTypes = {}
+
+---@class UGridPathFollowingComponent : UPathFollowingComponent
+---@field GridManager UNavLocalGridManager
+local UGridPathFollowingComponent = {}
+
+---@class UNavFilter_AIControllerDefault : UNavigationQueryFilter
+local UNavFilter_AIControllerDefault = {}
+
+---@class UNavLocalGridManager : UObject
+local UNavLocalGridManager = {}
+
+---@class UPathFollowingComponent : UActorComponent
+---@field MovementComp UNavMovementComponent
+---@field MyNavData ANavigationData
+local UPathFollowingComponent = {}
+
+---@class UPathFollowingManager : UObject
+local UPathFollowingManager = {}
+
+---@class UPawnAction : UObject
+---@field ChildAction UPawnAction
+---@field ParentAction UPawnAction
+---@field OwnerComponent UPawnActionsComponent
+---@field Instigator UObject
+---@field BrainComp UBrainComponent
+---@field bAllowNewSameClassInstance boolean
+---@field bReplaceActiveSameClassInstance boolean
+---@field bShouldPauseMovement boolean
+---@field bAlwaysNotifyOnFinished boolean
+local UPawnAction = {}
+
+---@class UPawnAction_BlueprintBase : UPawnAction
+local UPawnAction_BlueprintBase = {}
+
+---@class UPawnAction_Move : UPawnAction
+---@field GoalActor AActor
+---@field GoalLocation FVector
+---@field AcceptableRadius float
+---@field FilterClass TSubclassOf<UNavigationQueryFilter>
+---@field bAllowStrafe boolean
+---@field bFinishOnOverlap boolean
+---@field bUsePathfinding boolean
+---@field bAllowPartialPath boolean
+---@field bProjectGoalToNavigation boolean
+---@field bUpdatePathToGoal boolean
+---@field bAbortChildActionOnPathChange boolean
+local UPawnAction_Move = {}
+
+---@class UPawnAction_Repeat : UPawnAction
+---@field ActionToRepeat UPawnAction
+---@field RecentActionCopy UPawnAction
+---@field ChildFailureHandlingMode EPawnActionFailHandling::Type
+local UPawnAction_Repeat = {}
+
+---@class UPawnAction_Sequence : UPawnAction
+---@field ActionSequence TArray<UPawnAction>
+---@field ChildFailureHandlingMode EPawnActionFailHandling::Type
+---@field RecentActionCopy UPawnAction
+local UPawnAction_Sequence = {}
+
+---@class UPawnAction_Wait : UPawnAction
+---@field TimeToWait float
+local UPawnAction_Wait = {}
+
+---@class UPawnActionsComponent : UActorComponent
+---@field ControlledPawn APawn
+---@field ActionStacks TArray<FPawnActionStack>
+---@field ActionEvents TArray<FPawnActionEvent>
+---@field CurrentAction UPawnAction
+local UPawnActionsComponent = {}
+
+---@class UPawnSensingComponent : UActorComponent
+---@field HearingThreshold float
+---@field LOSHearingThreshold float
+---@field SightRadius float
+---@field SensingInterval float
+---@field HearingMaxSoundAge float
+---@field bEnableSensingUpdates boolean
+---@field bOnlySensePlayers boolean
+---@field bSeePawns boolean
+---@field bHearNoises boolean
+---@field OnSeePawn FPawnSensingComponentOnSeePawn
+---@field OnHearNoise FPawnSensingComponentOnHearNoise
+---@field PeripheralVisionAngle float
+---@field PeripheralVisionCosine float
+local UPawnSensingComponent = {}
+
+---@class UVisualLoggerExtension : UObject
+local UVisualLoggerExtension = {}
+
+---@param ResourceClass TSubclassOf<UGameplayTaskResource>
+function AAIController:ClaimTaskResource(ResourceClass) end
+
+function AAIController:GetAIPerceptionComponent() end
+
+function AAIController:GetFocalPoint() end
+
+---@param Actor AActor
+function AAIController:GetFocalPointOnActor(Actor) end
+
+function AAIController:GetFocusActor() end
+
+function AAIController:GetImmediateMoveDestination() end
+
+function AAIController:GetMoveStatus() end
+
+function AAIController:GetPathFollowingComponent() end
+
+function AAIController:HasPartialPath() end
+
+function AAIController:K2_ClearFocus() end
+
+---@param FP FVector
+function AAIController:K2_SetFocalPoint(FP) end
+
+---@param NewFocus AActor
+function AAIController:K2_SetFocus(NewFocus) end
+
+---@param Goal AActor
+---@param AcceptanceRadius float
+---@param bStopOnOverlap boolean
+---@param bUsePathfinding boolean
+---@param bCanStrafe boolean
+---@param FilterClass TSubclassOf<UNavigationQueryFilter>
+---@param bAllowPartialPath boolean
+function AAIController:MoveToActor(Goal, AcceptanceRadius, bStopOnOverlap, bUsePathfinding, bCanStrafe, FilterClass, bAllowPartialPath) end
+
+---@param Dest FVector
+---@param AcceptanceRadius float
+---@param bStopOnOverlap boolean
+---@param bUsePathfinding boolean
+---@param bProjectDestinationToNavigation boolean
+---@param bCanStrafe boolean
+---@param FilterClass TSubclassOf<UNavigationQueryFilter>
+---@param bAllowPartialPath boolean
+function AAIController:MoveToLocation(Dest, AcceptanceRadius, bStopOnOverlap, bUsePathfinding, bProjectDestinationToNavigation, bCanStrafe, FilterClass, bAllowPartialPath) end
+
+---@param NewlyClaimed FGameplayResourceSet
+---@param FreshlyReleased FGameplayResourceSet
+function AAIController:OnGameplayTaskResourcesClaimed(NewlyClaimed, FreshlyReleased) end
+
+---@param BlackboardComp UBlackboardComponent
+---@param BlackboardAsset UBlackboardData
+function AAIController:OnUsingBlackBoard(BlackboardComp, BlackboardAsset) end
+
+---@param BTAsset UBehaviorTree
+function AAIController:RunBehaviorTree(BTAsset) end
+
+---@param bEnable boolean
+function AAIController:SetMoveBlockDetection(bEnable) end
+
+---@param NewPFComponent UPathFollowingComponent
+function AAIController:SetPathFollowingComponent(NewPFComponent) end
+
+---@param ResourceClass TSubclassOf<UGameplayTaskResource>
+function AAIController:UnclaimTaskResource(ResourceClass) end
+
+---@param BlackboardAsset UBlackboardData
+---@param BlackboardComponent UBlackboardComponent
+function AAIController:UseBlackboard(BlackboardAsset, BlackboardComponent) end
+
+function ANavLinkProxy:HasMovingAgents() end
+
+function ANavLinkProxy:IsSmartLinkEnabled() end
+
+---@param Agent AActor
+---@param Destination FVector
+function ANavLinkProxy:ReceiveSmartLinkReached(Agent, Destination) end
+
+---@param Agent AActor
+function ANavLinkProxy:ResumePathFollowing(Agent) end
+
+---@param bEnabled boolean
+function ANavLinkProxy:SetSmartLinkEnabled(bEnabled) end
+
+function IBlackboardAssetProvider:GetBlackboardAsset() end
+
+---@param RequestID FAIRequestID
+---@param MovementResult EPathFollowingResult::Type
+function UAIAsyncTaskBlueprintProxy:OnMoveCompleted(RequestID, MovementResult) end
+
+---@param WorldContextObject UObject
+---@param Pawn APawn
+---@param Destination FVector
+---@param TargetActor AActor
+---@param AcceptanceRadius float
+---@param bStopOnOverlap boolean
+function UAIBlueprintHelperLibrary:CreateMoveToProxyObject(WorldContextObject, Pawn, Destination, TargetActor, AcceptanceRadius, bStopOnOverlap) end
+
+---@param ControlledActor AActor
+function UAIBlueprintHelperLibrary:GetAIController(ControlledActor) end
+
+---@param Target AActor
+function UAIBlueprintHelperLibrary:GetBlackboard(Target) end
+
+---@param Controller AController
+function UAIBlueprintHelperLibrary:GetCurrentPath(Controller) end
+
+---@param Controller AController
+function UAIBlueprintHelperLibrary:GetCurrentPathIndex(Controller) end
+
+---@param Controller AController
+function UAIBlueprintHelperLibrary:GetCurrentPathPoints(Controller) end
+
+---@param Controller AController
+function UAIBlueprintHelperLibrary:GetNextNavLinkIndex(Controller) end
+
+---@param DirectionVector FVector
+function UAIBlueprintHelperLibrary:IsValidAIDirection(DirectionVector) end
+
+---@param Location FVector
+function UAIBlueprintHelperLibrary:IsValidAILocation(Location) end
+
+---@param Rotation FRotator
+function UAIBlueprintHelperLibrary:IsValidAIRotation(Rotation) end
+
+---@param AnimInstance UAnimInstance
+---@param bLockMovement boolean
+---@param LockAILogic boolean
+function UAIBlueprintHelperLibrary:LockAIResourcesWithAnimation(AnimInstance, bLockMovement, LockAILogic) end
+
+---@param Target APawn
+---@param Message FName
+---@param MessageSource UObject
+---@param bSuccess boolean
+function UAIBlueprintHelperLibrary:SendAIMessage(Target, Message, MessageSource, bSuccess) end
+
+---@param Controller AController
+---@param Goal AActor
+function UAIBlueprintHelperLibrary:SimpleMoveToActor(Controller, Goal) end
+
+---@param Controller AController
+---@param Goal FVector
+function UAIBlueprintHelperLibrary:SimpleMoveToLocation(Controller, Goal) end
+
+---@param WorldContextObject UObject
+---@param PawnClass TSubclassOf<APawn>
+---@param BehaviorTree UBehaviorTree
+---@param Location FVector
+---@param Rotation FRotator
+---@param bNoCollisionFail boolean
+---@param Owner AActor
+function UAIBlueprintHelperLibrary:SpawnAIFromClass(WorldContextObject, PawnClass, BehaviorTree, Location, Rotation, bNoCollisionFail, Owner) end
+
+---@param AnimInstance UAnimInstance
+---@param bUnlockMovement boolean
+---@param UnlockAILogic boolean
+function UAIBlueprintHelperLibrary:UnlockAIResourcesWithAnimation(AnimInstance, bUnlockMovement, UnlockAILogic) end
+
+function UAIPerceptionComponent:ForgetAll() end
+
+---@param Actor AActor
+---@param Info FActorPerceptionBlueprintInfo
+function UAIPerceptionComponent:GetActorsPerception(Actor, Info) end
+
+---@param SenseToUse TSubclassOf<UAISense>
+---@param OutActors TArray<AActor>
+function UAIPerceptionComponent:GetCurrentlyPerceivedActors(SenseToUse, OutActors) end
+
+---@param SenseToUse TSubclassOf<UAISense>
+---@param OutActors TArray<AActor>
+function UAIPerceptionComponent:GetKnownPerceivedActors(SenseToUse, OutActors) end
+
+---@param SenseToUse TSubclassOf<UAISense>
+---@param OutActors TArray<AActor>
+function UAIPerceptionComponent:GetPerceivedActors(SenseToUse, OutActors) end
+
+---@param OutActors TArray<AActor>
+function UAIPerceptionComponent:GetPerceivedHostileActors(OutActors) end
+
+---@param SenseToUse TSubclassOf<UAISense>
+---@param OutActors TArray<AActor>
+function UAIPerceptionComponent:GetPerceivedHostileActorsBySense(SenseToUse, OutActors) end
+
+---@param Actor AActor
+---@param EndPlayReason EEndPlayReason::Type
+function UAIPerceptionComponent:OnOwnerEndPlay(Actor, EndPlayReason) end
+
+function UAIPerceptionComponent:RequestStimuliListenerUpdate() end
+
+---@param SenseClass TSubclassOf<UAISense>
+---@param bEnable boolean
+function UAIPerceptionComponent:SetSenseEnabled(SenseClass, bEnable) end
+
+---@param SenseClass TSubclassOf<UAISense>
+function UAIPerceptionStimuliSourceComponent:RegisterForSense(SenseClass) end
+
+function UAIPerceptionStimuliSourceComponent:RegisterWithPerceptionSystem() end
+
+function UAIPerceptionStimuliSourceComponent:UnregisterFromPerceptionSystem() end
+
+---@param SenseClass TSubclassOf<UAISense>
+function UAIPerceptionStimuliSourceComponent:UnregisterFromSense(SenseClass) end
+
+---@param WorldContextObject UObject
+---@param Stimulus FAIStimulus
+function UAIPerceptionSystem:GetSenseClassForStimulus(WorldContextObject, Stimulus) end
+
+---@param Actor AActor
+---@param EndPlayReason EEndPlayReason::Type
+function UAIPerceptionSystem:OnPerceptionStimuliSourceEndPlay(Actor, EndPlayReason) end
+
+---@param WorldContextObject UObject
+---@param Sense TSubclassOf<UAISense>
+---@param Target AActor
+function UAIPerceptionSystem:RegisterPerceptionStimuliSource(WorldContextObject, Sense, Target) end
+
+---@param PerceptionEvent UAISenseEvent
+function UAIPerceptionSystem:ReportEvent(PerceptionEvent) end
+
+---@param WorldContextObject UObject
+---@param PerceptionEvent UAISenseEvent
+function UAIPerceptionSystem:ReportPerceptionEvent(WorldContextObject, PerceptionEvent) end
+
+---@param ListenerActors TArray<AActor>
+function UAISense_Blueprint:GetAllListenerActors(ListenerActors) end
+
+---@param ListenerComponents TArray<UAIPerceptionComponent>
+function UAISense_Blueprint:GetAllListenerComponents(ListenerComponents) end
+
+---@param NewPawn APawn
+function UAISense_Blueprint:K2_OnNewPawn(NewPawn) end
+
+---@param ActorListener AActor
+---@param PerceptionComponent UAIPerceptionComponent
+function UAISense_Blueprint:OnListenerRegistered(ActorListener, PerceptionComponent) end
+
+---@param ActorListener AActor
+---@param PerceptionComponent UAIPerceptionComponent
+function UAISense_Blueprint:OnListenerUnregistered(ActorListener, PerceptionComponent) end
+
+---@param ActorListener AActor
+---@param PerceptionComponent UAIPerceptionComponent
+function UAISense_Blueprint:OnListenerUpdated(ActorListener, PerceptionComponent) end
+
+---@param EventsToProcess TArray<UAISenseEvent>
+function UAISense_Blueprint:OnUpdate(EventsToProcess) end
+
+---@param WorldContextObject UObject
+---@param DamagedActor AActor
+---@param Instigator AActor
+---@param DamageAmount float
+---@param EventLocation FVector
+---@param HitLocation FVector
+---@param Tag FName
+function UAISense_Damage:ReportDamageEvent(WorldContextObject, DamagedActor, Instigator, DamageAmount, EventLocation, HitLocation, Tag) end
+
+---@param WorldContextObject UObject
+---@param NoiseLocation FVector
+---@param Loudness float
+---@param Instigator AActor
+---@param MaxRange float
+---@param Tag FName
+function UAISense_Hearing:ReportNoiseEvent(WorldContextObject, NoiseLocation, Loudness, Instigator, MaxRange, Tag) end
+
+---@param Requestor AAIController
+---@param PredictedActor AActor
+---@param PredictionTime float
+function UAISense_Prediction:RequestControllerPredictionEvent(Requestor, PredictedActor, PredictionTime) end
+
+---@param Requestor APawn
+---@param PredictedActor AActor
+---@param PredictionTime float
+function UAISense_Prediction:RequestPawnPredictionEvent(Requestor, PredictedActor, PredictionTime) end
+
+function UAISystem:AIIgnorePlayers() end
+
+function UAISystem:AILoggingVerbose() end
+
+---@param Controller AAIController
+---@param GoalLocation FVector
+---@param GoalActor AActor
+---@param AcceptanceRadius float
+---@param StopOnOverlap EAIOptionFlag::Type
+---@param AcceptPartialPath EAIOptionFlag::Type
+---@param bUsePathfinding boolean
+---@param bLockAILogic boolean
+---@param bUseContinuosGoalTracking boolean
+---@param ProjectGoalOnNavigation EAIOptionFlag::Type
+function UAITask_MoveTo:AIMoveTo(Controller, GoalLocation, GoalActor, AcceptanceRadius, StopOnOverlap, AcceptPartialPath, bUsePathfinding, bLockAILogic, bUseContinuosGoalTracking, ProjectGoalOnNavigation) end
+
+function UAITask_MoveTo:IsMoveValid() end
+
+function UAITask_MoveTo:WasMovePartial() end
+
+---@param Controller AAIController
+---@param QueryTemplate UEnvQuery
+function UAITask_RunEQS:RunEQS(Controller, QueryTemplate) end
+
+function UBTDecorator_BlueprintBase:IsDecoratorExecutionActive() end
+
+function UBTDecorator_BlueprintBase:IsDecoratorObserverActive() end
+
+---@param OwnerActor AActor
+function UBTDecorator_BlueprintBase:PerformConditionCheck(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTDecorator_BlueprintBase:PerformConditionCheckAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+---@param NodeResult EBTNodeResult::Type
+function UBTDecorator_BlueprintBase:ReceiveExecutionFinish(OwnerActor, NodeResult) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+---@param NodeResult EBTNodeResult::Type
+function UBTDecorator_BlueprintBase:ReceiveExecutionFinishAI(OwnerController, ControlledPawn, NodeResult) end
+
+---@param OwnerActor AActor
+function UBTDecorator_BlueprintBase:ReceiveExecutionStart(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTDecorator_BlueprintBase:ReceiveExecutionStartAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+function UBTDecorator_BlueprintBase:ReceiveObserverActivated(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTDecorator_BlueprintBase:ReceiveObserverActivatedAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+function UBTDecorator_BlueprintBase:ReceiveObserverDeactivated(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTDecorator_BlueprintBase:ReceiveObserverDeactivatedAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+---@param DeltaSeconds float
+function UBTDecorator_BlueprintBase:ReceiveTick(OwnerActor, DeltaSeconds) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+---@param DeltaSeconds float
+function UBTDecorator_BlueprintBase:ReceiveTickAI(OwnerController, ControlledPawn, DeltaSeconds) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:ClearBlackboardValue(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:ClearBlackboardValueAsVector(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsActor(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsBool(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsClass(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsEnum(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsFloat(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsInt(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsName(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsObject(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsRotator(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsString(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+function UBTFunctionLibrary:GetBlackboardValueAsVector(NodeOwner, Key) end
+
+---@param NodeOwner UBTNode
+function UBTFunctionLibrary:GetOwnerComponent(NodeOwner) end
+
+---@param NodeOwner UBTNode
+function UBTFunctionLibrary:GetOwnersBlackboard(NodeOwner) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value boolean
+function UBTFunctionLibrary:SetBlackboardValueAsBool(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value UClass
+function UBTFunctionLibrary:SetBlackboardValueAsClass(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value uint8
+function UBTFunctionLibrary:SetBlackboardValueAsEnum(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value float
+function UBTFunctionLibrary:SetBlackboardValueAsFloat(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value int32
+function UBTFunctionLibrary:SetBlackboardValueAsInt(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value FName
+function UBTFunctionLibrary:SetBlackboardValueAsName(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value UObject
+function UBTFunctionLibrary:SetBlackboardValueAsObject(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value FRotator
+function UBTFunctionLibrary:SetBlackboardValueAsRotator(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value FString
+function UBTFunctionLibrary:SetBlackboardValueAsString(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param Key FBlackboardKeySelector
+---@param Value FVector
+function UBTFunctionLibrary:SetBlackboardValueAsVector(NodeOwner, Key, Value) end
+
+---@param NodeOwner UBTNode
+---@param OwningActor AActor
+function UBTFunctionLibrary:StartUsingExternalEvent(NodeOwner, OwningActor) end
+
+---@param NodeOwner UBTNode
+function UBTFunctionLibrary:StopUsingExternalEvent(NodeOwner) end
+
+function UBTService_BlueprintBase:IsServiceActive() end
+
+---@param OwnerActor AActor
+function UBTService_BlueprintBase:ReceiveActivation(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTService_BlueprintBase:ReceiveActivationAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+function UBTService_BlueprintBase:ReceiveDeactivation(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTService_BlueprintBase:ReceiveDeactivationAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+function UBTService_BlueprintBase:ReceiveSearchStart(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTService_BlueprintBase:ReceiveSearchStartAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+---@param DeltaSeconds float
+function UBTService_BlueprintBase:ReceiveTick(OwnerActor, DeltaSeconds) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+---@param DeltaSeconds float
+function UBTService_BlueprintBase:ReceiveTickAI(OwnerController, ControlledPawn, DeltaSeconds) end
+
+function UBTTask_BlueprintBase:FinishAbort() end
+
+---@param bSuccess boolean
+function UBTTask_BlueprintBase:FinishExecute(bSuccess) end
+
+function UBTTask_BlueprintBase:IsTaskAborting() end
+
+function UBTTask_BlueprintBase:IsTaskExecuting() end
+
+---@param OwnerActor AActor
+function UBTTask_BlueprintBase:ReceiveAbort(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTTask_BlueprintBase:ReceiveAbortAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+function UBTTask_BlueprintBase:ReceiveExecute(OwnerActor) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+function UBTTask_BlueprintBase:ReceiveExecuteAI(OwnerController, ControlledPawn) end
+
+---@param OwnerActor AActor
+---@param DeltaSeconds float
+function UBTTask_BlueprintBase:ReceiveTick(OwnerActor, DeltaSeconds) end
+
+---@param OwnerController AAIController
+---@param ControlledPawn APawn
+---@param DeltaSeconds float
+function UBTTask_BlueprintBase:ReceiveTickAI(OwnerController, ControlledPawn, DeltaSeconds) end
+
+---@param MessageName FName
+function UBTTask_BlueprintBase:SetFinishOnMessage(MessageName) end
+
+---@param MessageName FName
+---@param RequestID int32
+function UBTTask_BlueprintBase:SetFinishOnMessageWithId(MessageName, RequestID) end
+
+---@param CooldownTag FGameplayTag
+---@param CooldownDuration float
+---@param bAddToExistingDuration boolean
+function UBehaviorTreeComponent:AddCooldownTagDuration(CooldownTag, CooldownDuration, bAddToExistingDuration) end
+
+---@param CooldownTag FGameplayTag
+function UBehaviorTreeComponent:GetTagCooldownEndTime(CooldownTag) end
+
+---@param InjectTag FGameplayTag
+---@param BehaviorAsset UBehaviorTree
+function UBehaviorTreeComponent:SetDynamicSubtree(InjectTag, BehaviorAsset) end
+
+---@param KeyName FName
+function UBlackboardComponent:ClearValue(KeyName) end
+
+---@param KeyName FName
+---@param ResultLocation FVector
+function UBlackboardComponent:GetLocationFromEntry(KeyName, ResultLocation) end
+
+---@param KeyName FName
+---@param ResultRotation FRotator
+function UBlackboardComponent:GetRotationFromEntry(KeyName, ResultRotation) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsBool(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsClass(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsEnum(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsFloat(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsInt(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsName(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsObject(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsRotator(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsString(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:GetValueAsVector(KeyName) end
+
+---@param KeyName FName
+function UBlackboardComponent:IsVectorValueSet(KeyName) end
+
+---@param KeyName FName
+---@param BoolValue boolean
+function UBlackboardComponent:SetValueAsBool(KeyName, BoolValue) end
+
+---@param KeyName FName
+---@param ClassValue UClass
+function UBlackboardComponent:SetValueAsClass(KeyName, ClassValue) end
+
+---@param KeyName FName
+---@param EnumValue uint8
+function UBlackboardComponent:SetValueAsEnum(KeyName, EnumValue) end
+
+---@param KeyName FName
+---@param FloatValue float
+function UBlackboardComponent:SetValueAsFloat(KeyName, FloatValue) end
+
+---@param KeyName FName
+---@param IntValue int32
+function UBlackboardComponent:SetValueAsInt(KeyName, IntValue) end
+
+---@param KeyName FName
+---@param NameValue FName
+function UBlackboardComponent:SetValueAsName(KeyName, NameValue) end
+
+---@param KeyName FName
+---@param ObjectValue UObject
+function UBlackboardComponent:SetValueAsObject(KeyName, ObjectValue) end
+
+---@param KeyName FName
+---@param VectorValue FRotator
+function UBlackboardComponent:SetValueAsRotator(KeyName, VectorValue) end
+
+---@param KeyName FName
+---@param StringValue FString
+function UBlackboardComponent:SetValueAsString(KeyName, StringValue) end
+
+---@param KeyName FName
+---@param VectorValue FVector
+function UBlackboardComponent:SetValueAsVector(KeyName, VectorValue) end
+
+function UBrainComponent:IsPaused() end
+
+function UBrainComponent:IsRunning() end
+
+function UBrainComponent:RestartLogic() end
+
+function UBrainComponent:StartLogic() end
+
+---@param Reason FString
+function UBrainComponent:StopLogic(Reason) end
+
+---@param bSuspend boolean
+function UCrowdFollowingComponent:SuspendCrowdSteering(bSuspend) end
+
+---@param QuerierObject UObject
+---@param QuerierActor AActor
+---@param ResultingActorsSet TArray<AActor>
+function UEnvQueryContext_BlueprintBase:ProvideActorsSet(QuerierObject, QuerierActor, ResultingActorsSet) end
+
+---@param QuerierObject UObject
+---@param QuerierActor AActor
+---@param ResultingLocationSet TArray<FVector>
+function UEnvQueryContext_BlueprintBase:ProvideLocationsSet(QuerierObject, QuerierActor, ResultingLocationSet) end
+
+---@param QuerierObject UObject
+---@param QuerierActor AActor
+---@param ResultingActor AActor
+function UEnvQueryContext_BlueprintBase:ProvideSingleActor(QuerierObject, QuerierActor, ResultingActor) end
+
+---@param QuerierObject UObject
+---@param QuerierActor AActor
+---@param ResultingLocation FVector
+function UEnvQueryContext_BlueprintBase:ProvideSingleLocation(QuerierObject, QuerierActor, ResultingLocation) end
+
+---@param GeneratedActor AActor
+function UEnvQueryGenerator_BlueprintBase:AddGeneratedActor(GeneratedActor) end
+
+---@param GeneratedVector FVector
+function UEnvQueryGenerator_BlueprintBase:AddGeneratedVector(GeneratedVector) end
+
+---@param ContextLocations TArray<FVector>
+function UEnvQueryGenerator_BlueprintBase:DoItemGeneration(ContextLocations) end
+
+function UEnvQueryGenerator_BlueprintBase:GetQuerier() end
+
+---@param QueryInstance UEnvQueryInstanceBlueprintWrapper
+---@param QueryStatus EEnvQueryStatus::Type
+function UEnvQueryInstanceBlueprintWrapper:EQSQueryDoneSignature__DelegateSignature(QueryInstance, QueryStatus) end
+
+---@param ItemIndex int32
+function UEnvQueryInstanceBlueprintWrapper:GetItemScore(ItemIndex) end
+
+---@param ResultActors TArray<AActor>
+function UEnvQueryInstanceBlueprintWrapper:GetQueryResultsAsActors(ResultActors) end
+
+---@param ResultLocations TArray<FVector>
+function UEnvQueryInstanceBlueprintWrapper:GetQueryResultsAsLocations(ResultLocations) end
+
+function UEnvQueryInstanceBlueprintWrapper:GetResultsAsActors() end
+
+function UEnvQueryInstanceBlueprintWrapper:GetResultsAsLocations() end
+
+---@param ParamName FName
+---@param Value float
+function UEnvQueryInstanceBlueprintWrapper:SetNamedParam(ParamName, Value) end
+
+---@param WorldContextObject UObject
+---@param QueryTemplate UEnvQuery
+---@param Querier UObject
+---@param RunMode EEnvQueryRunMode::Type
+---@param WrapperClass TSubclassOf<UEnvQueryInstanceBlueprintWrapper>
+function UEnvQueryManager:RunEQSQuery(WorldContextObject, QueryTemplate, Querier, RunMode, WrapperClass) end
+
+---@param WorldContextObject UObject
+---@param Location FVector
+---@param Extent FVector
+---@param Rotation FRotator
+---@param Radius2D int32
+---@param Height float
+---@param bRebuildGrids boolean
+function UNavLocalGridManager:AddLocalNavigationGridForBox(WorldContextObject, Location, Extent, Rotation, Radius2D, Height, bRebuildGrids) end
+
+---@param WorldContextObject UObject
+---@param Location FVector
+---@param CapsuleRadius float
+---@param CapsuleHalfHeight float
+---@param Radius2D int32
+---@param Height float
+---@param bRebuildGrids boolean
+function UNavLocalGridManager:AddLocalNavigationGridForCapsule(WorldContextObject, Location, CapsuleRadius, CapsuleHalfHeight, Radius2D, Height, bRebuildGrids) end
+
+---@param WorldContextObject UObject
+---@param Location FVector
+---@param Radius2D int32
+---@param Height float
+---@param bRebuildGrids boolean
+function UNavLocalGridManager:AddLocalNavigationGridForPoint(WorldContextObject, Location, Radius2D, Height, bRebuildGrids) end
+
+---@param WorldContextObject UObject
+---@param Locations TArray<FVector>
+---@param Radius2D int32
+---@param Height float
+---@param bRebuildGrids boolean
+function UNavLocalGridManager:AddLocalNavigationGridForPoints(WorldContextObject, Locations, Radius2D, Height, bRebuildGrids) end
+
+---@param WorldContextObject UObject
+---@param Start FVector
+---@param End FVector
+---@param PathPoints TArray<FVector>
+function UNavLocalGridManager:FindLocalNavigationGridPath(WorldContextObject, Start, End, PathPoints) end
+
+---@param WorldContextObject UObject
+---@param GridId int32
+---@param bRebuildGrids boolean
+function UNavLocalGridManager:RemoveLocalNavigationGrid(WorldContextObject, GridId, bRebuildGrids) end
+
+---@param WorldContextObject UObject
+---@param CellSize float
+function UNavLocalGridManager:SetLocalNavigationGridDensity(WorldContextObject, CellSize) end
+
+function UPathFollowingComponent:GetPathActionType() end
+
+function UPathFollowingComponent:GetPathDestination() end
+
+---@param SelfActor AActor
+---@param OtherActor AActor
+---@param NormalImpulse FVector
+---@param Hit FHitResult
+function UPathFollowingComponent:OnActorBump(SelfActor, OtherActor, NormalImpulse, Hit) end
+
+---@param NavData ANavigationData
+function UPathFollowingComponent:OnNavDataRegistered(NavData) end
+
+---@param WorldContextObject UObject
+---@param ActionClass TSubclassOf<UPawnAction>
+function UPawnAction:CreateActionInstance(WorldContextObject, ActionClass) end
+
+---@param WithResult EPawnActionResult::Type
+function UPawnAction:Finish(WithResult) end
+
+function UPawnAction:GetActionPriority() end
+
+---@param ControlledPawn APawn
+---@param WithResult EPawnActionResult::Type
+function UPawnAction_BlueprintBase:ActionFinished(ControlledPawn, WithResult) end
+
+---@param ControlledPawn APawn
+function UPawnAction_BlueprintBase:ActionPause(ControlledPawn) end
+
+---@param ControlledPawn APawn
+function UPawnAction_BlueprintBase:ActionResume(ControlledPawn) end
+
+---@param ControlledPawn APawn
+function UPawnAction_BlueprintBase:ActionStart(ControlledPawn) end
+
+---@param ControlledPawn APawn
+---@param DeltaSeconds float
+function UPawnAction_BlueprintBase:ActionTick(ControlledPawn, DeltaSeconds) end
+
+---@param ActionToAbort UPawnAction
+function UPawnActionsComponent:K2_AbortAction(ActionToAbort) end
+
+---@param ActionToAbort UPawnAction
+function UPawnActionsComponent:K2_ForceAbortAction(ActionToAbort) end
+
+---@param Pawn APawn
+---@param Action UPawnAction
+---@param Priority EAIRequestPriority::Type
+function UPawnActionsComponent:K2_PerformAction(Pawn, Action, Priority) end
+
+---@param NewAction UPawnAction
+---@param Priority EAIRequestPriority::Type
+---@param Instigator UObject
+function UPawnActionsComponent:K2_PushAction(NewAction, Priority, Instigator) end
+
+function UPawnSensingComponent:GetPeripheralVisionAngle() end
+
+function UPawnSensingComponent:GetPeripheralVisionCosine() end
+
+---@param Instigator APawn
+---@param Location FVector
+---@param Volume float
+function UPawnSensingComponent:HearNoiseDelegate__DelegateSignature(Instigator, Location, Volume) end
+
+---@param Pawn APawn
+function UPawnSensingComponent:SeePawnDelegate__DelegateSignature(Pawn) end
+
+---@param NewPeripheralVisionAngle float
+function UPawnSensingComponent:SetPeripheralVisionAngle(NewPeripheralVisionAngle) end
+
+---@param NewSensingInterval float
+function UPawnSensingComponent:SetSensingInterval(NewSensingInterval) end
+
+---@param bEnabled boolean
+function UPawnSensingComponent:SetSensingUpdatesEnabled(bEnabled) end

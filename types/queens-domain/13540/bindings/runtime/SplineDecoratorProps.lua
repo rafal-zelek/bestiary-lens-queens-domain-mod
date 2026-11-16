@@ -1,0 +1,21 @@
+---@meta
+
+---@class FSplineDecoratorProps
+---@field OrientationMode_29_EFF37B064C9DFE8B1C5092AAEB6866CE SplineDecoratorOrientationMode::Type
+---@field Meshes_9_611DFC2842DCBAA908E3D8B958098A15 TArray<FSplineDecoratorMesh>
+---@field Actors_12_8AFD81C6424C708EE8BF7E8A32A2F897 TArray<FSplineDecoratorActor>
+---@field Transforms_16_683A40E44054BD673D2234B8B9CA6407 TArray<FTransform>
+---@field RandomOffset_30_D79D4A104AAF0DC46FC0D9950266F5BF FTransform
+---@field LockRandomScaleToX_44_7F0B569049670AF0E72C89960B11E9C1 boolean
+---@field PlaceAtPointsInsteadOfSpacing_52_00825965470DF179075B558965B90230 boolean
+---@field PlaceAtPointsOnSplineLayer_56_B6CA0B674BA2DC094AABBD9E6AAE9E06 int32
+---@field Spacing_33_D1AFFF624D509009C63FE580FAB92771 float
+---@field SpacingOffset_35_29CA583349F4682CC7409298F54F822B float
+---@field EnableMeshCollision_41_BBB21F8845075EAE6E1D3EBB6A87BF12 boolean
+---@field Seed_38_1C05A25C40F97D2411C479A165752CE4 int32
+---@field SegmentBlacklist_49_BFCDF91F468AE6E5035ABC8AFBA698D3 TSet<int32>
+---@field TraceToPlace_58_12B8915F44712BFF1F656CA78E6F0EE8 boolean
+---@field TraceDirection_61_9E4CCE3E4E18DE902412E08D770FE971 FVector
+---@field TraceOrientToNormal_65_DD81E95E433E524406EB17881F1DD906 boolean
+---@field TraceObjectTypes_69_B47965B6453620418765E49FEA1E88E3 TArray<EObjectTypeQuery>
+local FSplineDecoratorProps = {}

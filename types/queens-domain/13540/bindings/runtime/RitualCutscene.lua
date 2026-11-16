@@ -1,0 +1,72 @@
+---@meta
+
+---@class USequenceDirector_C : ULevelSequenceDirector
+---@field UberGraphFrame FPointerToUberGraphFrame
+local USequenceDirector_C = {}
+
+---@param EntryPoint int32
+function USequenceDirector_C:ExecuteUbergraph_SequenceDirector(EntryPoint) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:RitualCutsceneManager_Event_0(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:RitualCutsceneManager_Event_1(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_0(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_1(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_10(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_11(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_12(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_13(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_14(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_15(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_16(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_17(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_2(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_3(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_4(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_5(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_6(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_7(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_8(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+function USequenceDirector_C:SequenceEvent__ENTRYPOINTSequenceDirector_9(RitualCutsceneManager) end
+
+---@param RitualCutsceneManager ARitualCutsceneManager_C
+---@param TextIndex int32
+function USequenceDirector_C:ShowText(RitualCutsceneManager, TextIndex) end

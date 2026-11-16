@@ -1,0 +1,97 @@
+---@meta
+
+---@class UFS_SaveSlot_C : UFS_SaveGame
+---@field SavableActorStates TMap<FGuid, int32>
+---@field Inventory TMap<UFS_ItemData_C, int32>
+---@field SaveLocation FTransform
+---@field SaveLevel FName
+---@field SavableActorItems TMap<FGuid, UFS_ItemData_C>
+---@field NamedSaveData TMap<FName, int32>
+---@field SelectedConsumable UFS_ItemData_C
+---@field XPAmount int32
+---@field SavedPlayerLevel int32
+---@field PlayingMusicTrack USoundCue
+---@field UnlockedTeleporters TArray<UFS_LocationData>
+---@field SavePointID UFS_LocationData
+---@field QuickSlotItems TSet<UFS_ItemData_C>
+---@field DoIntro boolean
+---@field SaveVersion int32
+---@field LastSaveTime FDateTime
+---@field HasEverSaved boolean
+---@field ConsumablesUsedCount int32
+---@field SavedArea UFS_LocationData
+---@field PlayTime float
+---@field MaxProgressionLevel int32
+---@field ShopPurchases TMap<FName, int32>
+---@field EquippedItemSlots TMap<int32, UFS_ItemData_C>
+---@field EquippedItems TMap<UFS_ItemData_C, int32>
+---@field ItemDrops TMap<FGuid, FItemDropSave>
+---@field HasEverGottenConsumableItem boolean
+---@field NewItemsInShop boolean
+---@field PlayTime_Seconds int32
+---@field WeaponXP TMap<UFS_ItemData_C, float>
+---@field WeaponLevels TMap<UFS_ItemData_C, int32>
+---@field LastSavePlaytime float
+---@field CurrentPlayerHealth float
+---@field CurrentPlayerUltraCharge float
+---@field MagicFireApplied boolean
+---@field MagicFireDamagePool float
+---@field CollectedNotes TArray<UReadableText_DataAsset_C>
+---@field ShopTeleporterDestinations TMap<FName, UFS_LocationData>
+---@field BackupIndex int32
+---@field KilledEnemyCounts TMap<UQD_EnemyData_base, int32>
+---@field NPCsInJournal TSet<UNPC_Data_C>
+---@field CurrentlySelectedWeapon UFS_ItemData_C
+---@field CurrentlySelectedDagger int32
+---@field WoodenClubEvolvedHealingApplied boolean
+---@field WoodenClubEvolvedHealingDurationRemaining float
+---@field WoodenClubEvolvedHealingPower float
+---@field CurrentAreaName FText
+---@field CurrentLocationName FText
+---@field EnemyDropDataA TMap<UEnemyData_C, boolean>
+---@field EnemyDropDataB TMap<UEnemyData_C, boolean>
+---@field WeaponCharges TMap<UFS_ItemData_C, float>
+---@field DaggerCharges TMap<UFS_ItemData_C, float>
+---@field ShopSales TMap<UFS_ItemData_C, int32>
+---@field GenericStatusEffectData TMap<FName, float>
+---@field LastTouchedCheckpoint UFS_LocationData
+---@field ShopReturnLocation UFS_LocationData
+---@field SavePointsVisited TArray<UFS_LocationData>
+---@field ActiveSuspendSlot int32
+---@field SuspendLocation FTransform
+---@field SuspendPositionIsForcedMidair boolean
+---@field LevelLoadingSuspendState FFS_LevelLoadSuspendState
+---@field MusicAreaSuspendState TArray<FFS_MusicAreaInstance_SuspendData>
+---@field IsSuspendSave boolean
+---@field WeaponUpgrades TMap<UFS_Item, int32>
+---@field LastRealSavePlaytime float
+---@field GrimoirePasswordsUsed TArray<FString>
+---@field ItemCooldownEndTimes TMap<UFS_ItemData_C, float>
+---@field LastRestTime float
+---@field CurrentLockInID FName
+---@field AchievementThrowables TSet<UFS_ItemData_C>
+---@field GrimoireInkPoints float
+---@field PhotoModePalleteIndex int32
+---@field PhotoModeBrightness float
+---@field PhotoModeContrast float
+---@field PhotoModeSaturation float
+---@field PhotoModeROffset float
+---@field PhotoModeGOffset float
+---@field PhotoModeBOffset float
+---@field PhotoModeFilterEasterEggEnabled boolean
+---@field MagicRotApplied boolean
+---@field MagicRotRemaining float
+---@field DoWakeOnBeach boolean
+---@field GamePlayTime float
+---@field GamePlayTime_Seconds int32
+local UFS_SaveSlot_C = {}
+
+---@param Time float
+function UFS_SaveSlot_C:ReadGamePlayTime(Time) end
+
+---@param Name FName
+---@param Success boolean
+function UFS_SaveSlot_C:ReadNamedData(Name, Success) end
+
+---@param Time float
+function UFS_SaveSlot_C:ReadPlayTime(Time) end

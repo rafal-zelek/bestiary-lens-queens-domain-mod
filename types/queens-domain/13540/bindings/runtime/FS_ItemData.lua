@@ -1,0 +1,32 @@
+---@meta
+
+---@class UFS_ItemData_C : UFS_Item
+---@field ['Default Visual BP'] TSoftClassPtr<AActor>
+---@field UIOpacityPow float
+---@field ['Drop BP / Fallback Visual BP'] TSubclassOf<ACoreItemPickupActor_C>
+---@field Name FText
+---@field ['Item Description'] FText
+---@field ItemIcon UTexture2D
+---@field Pickup3DConfig FItem3DConfig
+---@field SortOrder int32
+---@field Consumable boolean
+---@field ShowInKeyMenu boolean
+---@field KeyTag FName
+---@field Unstackable boolean
+---@field HideWhenEmpty boolean
+---@field Weapon boolean
+---@field Equippable boolean
+---@field EquipSlot ItemEquipSlotType::Type
+---@field Category ItemCategory::Type
+---@field PickupSoundOverride USoundCue
+---@field ShowCountInInventory boolean
+---@field Thumbnail3DConfig FItem3DConfig
+---@field Inspect3DConfig FItem3DConfig
+---@field InspectBPOverride TSubclassOf<AActor>
+---@field ThumbnailBPOverride TSubclassOf<AActor>
+---@field ['Pickup BP'] TSubclassOf<AActor>
+---@field ThumbnailMask UTexture2D
+---@field ['Consumes Battery'] boolean
+---@field PickupPutAwayPos FVector
+---@field DataImportKey FName
+local UFS_ItemData_C = {}

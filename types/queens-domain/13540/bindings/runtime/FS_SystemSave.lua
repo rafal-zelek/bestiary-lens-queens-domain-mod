@@ -1,0 +1,64 @@
+---@meta
+
+---@class UFS_SystemSave_C : USaveGame
+---@field LookSensitivity float
+---@field MouseLookSensitivity float
+---@field AnalogueStickDeadzone float
+---@field RumbleStrength float
+---@field InvertMouseY boolean
+---@field InvertGamepadY boolean
+---@field InvertMouseX boolean
+---@field SelectedSaveSlot float
+---@field MasterVolume float
+---@field MusicVolume float
+---@field EffectsVolume float
+---@field WeaponBarBehaviour int32
+---@field HeadphonesMode boolean
+---@field InvertGamepadX boolean
+---@field MouseLock boolean
+---@field FramerateCap int32
+---@field Vsync boolean
+---@field FOV float
+---@field LockedResScale boolean
+---@field ResScale float
+---@field PixelFilter float
+---@field MouseLook boolean
+---@field SwapSticks boolean
+---@field ActionBindings TMap<FName, FSavableActionBinding>
+---@field AxisBindings TMap<FName, FSavableAxisBinding>
+---@field ColorStyle int32
+---@field MipOffset int32
+---@field DitherAmount int32
+---@field HUDScale float
+---@field ShowDebugHUD boolean
+---@field IconStylePref int32
+---@field AlwaysFSMoveInAir boolean
+---@field Brightness float
+---@field DisableStickTuning boolean
+---@field PauseOnUnfocus boolean
+---@field AutoPutAwayItem boolean
+---@field E3Cam boolean
+---@field E3Cam_Speed float
+---@field AutoAddConsumables boolean
+---@field LanguageCode FString
+---@field HighResFont boolean
+---@field BestiaryNotifsOn boolean
+---@field GuideNotifsOn boolean
+---@field ShowCompass boolean
+---@field AnalogueStickAcceleration float
+---@field ShowHUD boolean
+---@field ShowEnemyHP boolean
+---@field CrosshairMode int32
+---@field AspectRatioMode int32
+---@field ThinFont boolean
+---@field MuteWhenUnfocused boolean
+---@field ['Ratpods Consumed'] int32
+---@field ChallengeNotifsOn boolean
+---@field InteractRun boolean
+---@field EnableGamepad boolean
+---@field EnableAnalogSticks boolean
+---@field TextureStreaming boolean
+---@field TapToRunKBM boolean
+---@field TapToRunGP boolean
+---@field DisableScreenShake boolean
+local UFS_SystemSave_C = {}

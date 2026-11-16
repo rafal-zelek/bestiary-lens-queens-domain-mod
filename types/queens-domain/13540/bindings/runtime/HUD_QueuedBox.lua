@@ -1,0 +1,7 @@
+---@meta
+
+---@class FHUD_QueuedBox
+---@field Pos_12_AA6580874163CCF3BB283188E7AFD47A FVector2D
+---@field Size_11_84F6213C41B15D6BE1AF9A9A527F423A FVector2D
+---@field Color_7_D21A54C14DCA0DB8BED1A5AE506913FB FLinearColor
+local FHUD_QueuedBox = {}

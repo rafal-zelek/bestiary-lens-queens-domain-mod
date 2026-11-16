@@ -1,0 +1,8 @@
+---@meta
+
+---@class FHUD_QueuedText
+---@field Text_2_06660E67415C262B1F4B7794D2CD7F5D FString
+---@field Pos_5_11ECBC6340284EF1DA56888FE2CE09B8 FVector2D
+---@field Color_8_571AC5A34FDB7AF9507E1F88D6DCD1E1 FLinearColor
+---@field Scale_11_6EC8AB254D6EE93A802A83AC38C2BC43 float
+local FHUD_QueuedText = {}
