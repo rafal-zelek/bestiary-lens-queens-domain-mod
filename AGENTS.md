@@ -160,3 +160,16 @@ tests are not proof of in-game behavior.
 
 - Run checks appropriate to the change and report what was actually tested; the full offline
   CI-equivalent gate is `docker run --rm --network none bestiary-lens-ci` after building the image.
+
+## Engineering Workflow
+
+OpenSpec owns requirements, design, specifications, task planning, and change lifecycle.
+Discover available skills and select relevant ones autonomously. Do not invoke every skill
+mechanically. Use research and domain-modeling during exploration when relevant, and
+codebase-design for architecture. During implementation, use TDD where applicable, systematic
+debugging for failures, and native subagents for independent tasks. Use worktrees when
+concurrent changes require isolation. OpenSpec artifacts are the authoritative plan. Do not
+generate competing plans with other frameworks. Review changes against both coding standards
+and OpenSpec requirements. Compare the complete diff against the correct Git base, including
+uncommitted work. Run applicable tests, lint, typecheck, and build checks. Verify implementation
+against OpenSpec before archiving. Never claim success without execution evidence.
