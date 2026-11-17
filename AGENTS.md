@@ -136,6 +136,9 @@ tests are not proof of in-game behavior.
   (`require_conventional = true`), groups only `feat`, `fix`, `perf` and `refactor`, and skips
   `docs`, `test`, `ci`, `chore` and `build`. Trailers stay out of the subject so they never leak
   into generated notes; generated notes render `commit.message` only.
+- A local `.githooks/commit-msg` hook enforces all of the above: it rejects non-conventional
+  subjects, a missing or extra `Assisted-by: AI` trailer, and vendor/tool attribution. Install it
+  once per clone with `cp .githooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg`.
 - Stage only the files belonging to that change, run the checks appropriate to it, and report what
   was actually tested. Never commit generated `build/` output, private notes or configuration
   secrets. Review `git status --short --untracked-files=all` before committing.
