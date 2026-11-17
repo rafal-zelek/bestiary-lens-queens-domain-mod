@@ -102,8 +102,9 @@ one complete backed-up directory as `Mods/BestiaryLens`. No save migration is re
 ## Development and packaging
 
 The supported toolchain lives in `Dockerfile`: Python 3.13.9, Lua/luac 5.4.8,
-Lua Language Server 3.19.2, StyLua 2.6.0 and actionlint 1.7.12. The Python base image is pinned by digest;
-Lua, LuaLS, StyLua and actionlint downloads are verified against pinned SHA-256 values.
+Lua Language Server 3.19.2, StyLua 2.6.0, actionlint 1.7.12 and git-cliff 2.14.2.
+The Python base image is pinned by digest; Lua, LuaLS, StyLua, actionlint and git-cliff downloads
+are verified against pinned SHA-256 values.
 The Dockerfile supports Linux amd64 and arm64. Building needs network access;
 all project commands run without network access after the image is built.
 No host Python, Lua, Rust, Make or VS Code installation is required for Docker use.
@@ -278,9 +279,10 @@ Before publishing, review `git status --short --untracked-files=all` and the arc
 `.github/workflows/ci.yml` runs on pull requests, pushes to `main`, tags starting with `v`,
 and manual **Run workflow**. It builds the Docker image, validates formatting and SDK integrity,
 lints workflows and Lua, runs tests, then builds the mod and active SDK packages.
-All project tooling, including actionlint and SSH, is in the Dockerfile.
-The GitHub checkout/upload actions are pinned to commit SHAs; the workflow only needs
-`contents: read` and does not publish a release, push a commit/tag or connect to the Steam Deck.
+All project tooling, including actionlint, git-cliff and SSH, is in the Dockerfile.
+GitHub actions are pinned to commit SHAs. CI uses `contents: read`; tag publication jobs receive
+`contents: write` only where needed to create a GitHub Release or add the Nexus attempt marker.
+The workflow does not push a commit/tag or connect to the Steam Deck.
 
 Successful runs expose two downloadable artifacts:
 
@@ -288,8 +290,8 @@ Successful runs expose two downloadable artifacts:
 - `sdk-<commit-sha>`: the active game-versioned types ZIP and its SHA-256 sidecar.
 
 Packages are kept for 30 days; available LuaLS logs are uploaded even on failure and kept for 7 days.
-Artifacts are build outputs, not GitHub Releases. To distribute a version permanently,
-attach the package files to a release for the same checked tag/commit.
+For a checked version tag, CI also creates a GitHub Release with the mod ZIP, its SHA-256 sidecar,
+and generated or curated release notes. The separate SDK package remains a CI artifact.
 
 ### Release procedure
 
@@ -307,18 +309,64 @@ attach the package files to a release for the same checked tag/commit.
    ```
 
    The tag workflow checks that the tag exactly equals `v` + `package.py`'s `VERSION`;
-   a mismatch fails before packages are uploaded. Existing tags should remain immutable.
-4. Open the successful **CI run for the tag**, download `mod-<commit-sha>` and optionally
-   `sdk-<commit-sha>`, and unpack the outer GitHub artifact ZIPs. The files inside are the
-   actual versioned package ZIPs and `.sha256` sidecars; do not upload the outer artifact wrapper.
-5. In the repository's **Releases → Draft a new release**, choose the existing tag,
-   write or generate release notes, attach the mod ZIP and checksum, and optionally the
-   separate SDK ZIP and checksum. Review as a draft, then **Publish release**.
+   a mismatch fails before package publication. The current `VERSION` is `0.1.0`, so `v1.0.0`
+   will fail until the version is deliberately updated in all locations in step 1.
+   Existing tags should remain immutable.
+4. Push the tag and wait for its CI run. The workflow checks out the tag with full history,
+   packages that checkout, and generates notes for that same tag/commit. `.github/release-notes/<tag>.md`
+   overrides generated notes when present. There are currently no version tags in the repository;
+   the first release therefore needs a matching curated notes file or a prior semantic version baseline
+   tag, otherwise note generation fails closed. The `tools/test-git-cliff.sh` offline fixture also runs in CI.
+5. After CI succeeds, the workflow creates a published GitHub Release with the installable mod ZIP,
+   matching `.zip.sha256` file and the notes as the release body. It verifies the checksum and release
+   assets. The SDK package remains available in the CI artifact if needed; it is not attached to the
+   GitHub Release. Source code ZIP/TAR assets are repository archives, not the installable mod package.
+
+### Nexus Mods publication
+
+The tag workflow can publish to an existing Nexus mod page after the GitHub Release is published.
+Configure all three repository settings before enabling this path:
+
+- Secret `NEXUSMODS_API_KEY`: Nexus Mods API key.
+- Variable `NEXUSMODS_FILE_ID`: existing Nexus mod-file ID whose version history receives the new upload.
+- Variable `NEXUSMODS_MOD_ID`: Nexus mod ID used for the changelog and page description.
+
+If any one is empty, all Nexus publication, marker, and page-description steps are skipped; the GitHub
+Release still publishes. The official [Nexus-Mods upload action](https://github.com/Nexus-Mods/upload-action)
+is pinned to commit `98532f7670c27cbecc78fae03fa3e278147827e2`. It uploads a new version to the existing
+file ID, updates the mod version string, and appends the generated/curated release notes as changelog
+text. The changelog API accepts text; the workflow sends the release notes as-is and does not convert
+Markdown to BBCode or claim a particular rendering. The `description` input for that action describes
+the uploaded file version; it is deliberately left unset.
+
+The page's separate full description is the BBCode in [`docs/nexus-description.bbcode`](docs/nexus-description.bbcode).
+After the upload action succeeds, a separate `PATCH /mods/{id}` request sets only the page `description`;
+it leaves the page summary unchanged. The API currently marks this operation Experimental and requires
+the caller to be on the mod team or an admin. See the official
+[Nexus Mods API specification](https://github.com/Nexus-Mods/Vortex/blob/master/packages/nexus-api-v3/schema/openapi.yaml)
+and official [sample workflow](https://github.com/Nexus-Mods/API-Example).
+
+Before starting the Nexus action, CI checks the GitHub Release for the separate asset
+`nexus-upload-attempted.txt`, uploads that marker, then verifies that the asset is visible. Before this,
+the workflow downloads the published GitHub Release's ZIP and checksum and compares their bytes to the
+verified CI outputs; it also compares the release body to the CI notes, normalizing only CRLF and
+terminal newlines. Drafts, prereleases, missing or differing assets, differing notes, and any marker
+read/upload/verification error fail closed. An existing marker blocks the Nexus steps. The marker is
+intentionally durable: the official action makes separate upload/version/changelog requests, and an
+ambiguous failure could mean that some Nexus mutations already succeeded. The workflow does not retry
+or promise exactly-once delivery; rerunning a tagged workflow cannot automatically try the Nexus upload
+again, preventing a duplicate version or appended changelog.
+
+For recovery, inspect the Nexus Files tab and the target file's version history, the mod changelog for
+the release version, and the page description. Compare the uploaded file against the ZIP and checksum
+attached to the GitHub Release. Reconcile any partial state manually through Nexus Mods or its API;
+keep the marker in place and do not blindly rerun the tagged workflow. The workflow's marker is not part
+of release notes or the mod ZIP.
 
 GitHub's automatically supplied **Source code (zip/tar.gz)** downloads are repository archives,
 not the installable mod package. Users should install `BestiaryLens-<version>.zip` from Assets.
-The current workflow deliberately leaves the final release publication under your control;
-pushing a tag only validates and builds artifacts.
+Pushing a validated tag creates the GitHub Release automatically. Nexus publication is optional and
+depends on the three configured credentials listed above.
 
 ## License
 
