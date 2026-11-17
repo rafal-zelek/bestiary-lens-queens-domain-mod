@@ -33,12 +33,29 @@ class DistributionTests(unittest.TestCase):
     def test_high_level_scripts_cannot_import_engine_modules_directly(self):
         scripts = ROOT / 'Mods/BestiaryLens/Scripts'
         direct_require = re.compile(r"""\brequire\s*\(?\s*['"]sdk[./]engine[./]""")
+        native_calls = re.compile(
+            r"\b(?:StaticFindObject|StaticConstructObject|FindAllOf|RegisterHook|RegisterKeyBind|"
+            r"ExecuteInGameThread(?:WithDelay)?|LoopInGameThreadWithDelay|FText|FName)\s*\("
+        )
         domain_adapter = scripts / 'sdk/domain/game.lua'
         engine_directory = scripts / 'sdk/engine'
         for file in scripts.rglob('*.lua'):
-            if file != domain_adapter and engine_directory not in file.parents:
+            if engine_directory not in file.parents:
                 with self.subTest(file=file.relative_to(scripts)):
-                    self.assertNotRegex(file.read_text(), direct_require)
+                    source = file.read_text()
+                    if file != domain_adapter:
+                        self.assertNotRegex(source, direct_require)
+                    self.assertNotRegex(source, native_calls)
+
+    def test_runtime_modules_are_listed_in_payload(self):
+        release = module('package')
+        mod = ROOT / 'Mods/BestiaryLens'
+        listed_scripts = {name for name in release.MOD_FILES if name.endswith('.lua')}
+        require_module = re.compile(r"""\brequire\s*\(?\s*['"]([\w.]+)['"]""")
+        for name in sorted(listed_scripts):
+            with self.subTest(file=name):
+                for dependency in require_module.findall((mod / name).read_text()):
+                    self.assertIn('Scripts/' + dependency.replace('.', '/') + '.lua', listed_scripts)
 
     def test_deploy_preserves_other_mods_and_backs_up_previous_version(self):
         deploy = module('deploy')

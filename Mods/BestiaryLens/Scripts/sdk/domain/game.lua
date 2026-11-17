@@ -1,4 +1,6 @@
 local Engine = require('sdk.engine.bestiary_runtime')
+local LensRuntime = require('sdk.engine.lens_runtime')
+local Lens = require('sdk.domain.lens')
 local Position = require('sdk.domain.position')
 
 local SPAWN_SETTLE_MS = 500
@@ -108,6 +110,17 @@ function Game.bindSmokeTest(options, scenario)
         end
         resume()
     end)
+end
+
+---@param config BL.LensConfig
+---@param log fun(message: string)
+---@param marker string
+---@param smokeTest BL.Scenario
+function Game.startLens(config, log, marker, smokeTest)
+    local runtime = LensRuntime.new(config, log)
+    local lens = Lens.new(runtime, config, log)
+    runtime.start(lens.update, lens.toggle)
+    Game.bindSmokeTest({ log = log, marker = marker, readLensTarget = runtime.readLensTarget }, smokeTest)
 end
 
 return Game

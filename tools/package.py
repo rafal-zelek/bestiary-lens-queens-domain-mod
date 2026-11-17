@@ -9,7 +9,10 @@ MOD_FILES = ('enabled.txt', 'Scripts/main.lua', 'Scripts/config.lua',
              'Scripts/card_model.lua', 'Scripts/card_view.lua', 'Scripts/f8_smoke.lua',
              'Scripts/sdk/domain/direction.lua', 'Scripts/sdk/domain/enemies.lua',
              'Scripts/sdk/domain/game.lua', 'Scripts/sdk/domain/position.lua',
-             'Scripts/sdk/engine/bestiary_runtime.lua')
+             'Scripts/sdk/domain/lens.lua', 'Scripts/sdk/domain/targeting.lua',
+             'Scripts/sdk/engine/bestiary_runtime.lua', 'Scripts/sdk/engine/card_widgets.lua',
+             'Scripts/sdk/engine/enemy_data.lua', 'Scripts/sdk/engine/journal.lua',
+             'Scripts/sdk/engine/lens_runtime.lua', 'Scripts/sdk/engine/objects.lua')
 PAYLOAD = tuple('Mods/BestiaryLens/' + name for name in MOD_FILES) + (
     'README.md', 'LICENSE')
 

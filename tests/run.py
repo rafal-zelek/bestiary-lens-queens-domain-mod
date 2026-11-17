@@ -20,15 +20,14 @@ def run(command, data):
     subprocess.run(cmd, input=data.encode(), check=True)
 
 scripts = ROOT/'Mods/BestiaryLens/Scripts'
-script = 'BestiaryLens_TEST_MODE=true\n'
+script = ''
 for file in sorted(scripts.rglob('*.lua')):
     source = file.read_text()
     run(['luac', '-p', '-'], source)
     if file != scripts/'main.lua':
         name = '.'.join(file.relative_to(scripts).with_suffix('').parts)
         script += 'package.preload["'+name+'"]=function() return assert(load([====['+source+']====]))() end\n'
-script += 'local api=assert(load([====['+(scripts/'main.lua').read_text()+']====]))()\n'
-for name in ('card.lua', 'model.lua', 'f8_scenario.lua'):
+for name in ('card.lua', 'model.lua', 'lens.lua', 'f8_scenario.lua'):
     script += (ROOT/'tests'/name).read_text()+'\n'
 run(['lua', '-'], script)
 print('Bestiary Lens: all automated checks passed')

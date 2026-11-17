@@ -1,42 +1,36 @@
 # Agent guide
 
 Bestiary Lens is a contextual bestiary card for **Queen's Domain**, delivered as a UE4SS Lua
-mod. The runtime mod is three Lua files; everything else is build, test, SDK-capture and release
-tooling around it. Keep the README player-facing and concise; put development and release
+mod. The Lua runtime lives in `Mods/BestiaryLens/Scripts`. Keep the README player-facing and concise; put development and release
 procedures in `CONTRIBUTING.md` and `docs/`.
 
 ## Layout
 
 - `Mods/BestiaryLens/` — the shipped mod. `enabled.txt` (intentionally empty) plus
-  `Scripts/{main,config,card_model,card_view}.lua`. This directory is the runtime payload.
+  `Scripts/` contains the entry point, card modules, F8 scenario and its internal SDK.
 - `tools/` — developer Python and shell tools, plus `type_exporter.lua` (the SDK capture bridge
   installed on a device). Not shipped in the mod ZIP.
 - `tests/` — Python `unittest` suite (`test_*.py`) and the Lua logic harness
-  (`run.py` plus `card.lua`, `model.lua`).
+  (`run.py` and the Lua files it loads).
 - `types/` — tracked SDK source data: aggregated UE4SS/Lua declarations per game version.
 - `docs/` — `development.md` (workflow, toolchain, SDK capture, packaging) and `releasing.md`.
 - `build/` — all generated output (reports, packages, LuaLS logs). Git-ignored; never commit it.
 
 ## Mod architecture and data flow
 
-The three scripts have strict responsibilities; preserve the separation:
+- `main.lua` wires configuration, logging and the F8 scenario into `sdk/domain/game.lua`.
+- `config.lua` names targeting thresholds, update timing and placement.
+- `card_model.lua` composes and sanitizes the presentation data. Locked entries expose no
+  enemy name, stats or drops. `card_view.lua` formats values and chooses presentation colors.
+- `sdk/domain/` owns the typed contracts, targeting geometry and debounce, and card update
+  sequence. Game objects are accessed through the declared domain operations.
+- `sdk/engine/` owns UE4SS hooks, game and save access, native text, journal operations and UMG
+  widgets. `sdk/domain/game.lua` is the composition point that imports engine adapters.
 
-- `config.lua` — plain tunables table (`acquireDelay`, `releaseDelay`, `maxDistance`,
-  `aimPadding`, `rightMargin`, `bottomMargin`). No logic.
-- `card_model.lua` — pure data transform (`M.build`). No Unreal lookups, actors, saves or UI.
-  Sanitizes input into the presentation contract; a locked/`known=false` input must not leak
-  name, stats or drops.
-- `card_view.lua` — presentation only. Constructs widgets and `render`s a model; no actor
-  queries, targeting, unlock checks or journals.
-- `main.lua` — the driver and the only place that touches Unreal. Holds all game-thread work.
-
-Control flow in `main.lua`: `LoopInGameThreadWithDelay` polls for `FS_PlayerHUD_C`, then
-`RegisterHook`s its Tick. Each tick (throttled to ~0.1s) runs `update`, which:
-`selectEnemy` (every 0.5s rescans `EnemyBase_C`; scores via ray/AABB against visible mesh bounds
-plus a `LineTraceSingle` obstruction check, not the actor root) → `stepHover` debounce
-(acquire/release delays) → `unlocked` (read-only check of `ActiveSaveSlot.KilledEnemyCounts`) →
-`presentationFor` → `Model.build` → `CardView:render`. F9 toggles visibility; F10 opens the
-displayed enemy's journal entry (via `OpenPauseMenu` then a polling loop that selects the entry).
+The adapter attaches to the gameplay HUD Tick. The lens refreshes on its configured interval,
+checks the current aim against visible mesh bounds and line of sight, debounces the target,
+and shows the corresponding card. The adapter reads the unlock status from the active save.
+F9 toggles visibility. F10 opens the displayed target in the native journal.
 
 Localized captions are **captured from the game's own widget templates**
 (`EnemyDescriptionBox_C`, `JournalMenu_C`) by walking their `WidgetTree`. Do not add a private
@@ -77,13 +71,8 @@ tuple and `commands()` there.
 `tests/run.py` (invoked by the `test` task) does two things:
 
 1. `unittest discover` over `tests/test_*.py` (Python tooling, packaging, workflow and SDK tests).
-2. A Lua 5.4 harness: compiles every `Mods/BestiaryLens/Scripts/*.lua` with `luac -p`, then
-   concatenates the scripts and `tests/{card,model}.lua`. It sets `BestiaryLens_TEST_MODE=true`,
-   stubs the module loader via `package.preload`, and loads `main.lua`, which **returns a table
-   of pure functions** (`unlocked`, `score`, `rayBox`, `stepHover`, `decodeDrops`, `excerpt`,
-   `widgetName`, ...) instead of installing hooks when that flag is set. When you add a pure,
-   testable helper to `main.lua`, export it in that block and add assertions to `tests/card.lua`
-   or `tests/model.lua`.
+2. A Lua 5.4 harness: compiles all runtime Lua files with `luac -p`, preloads the modules
+   and runs the model, targeting, presentation, Lens and F8 assertions without starting UE4SS.
 
 Lua tests monkeypatch Unreal globals (`FindAllOf`, `FText`, ...) directly, so keep pure logic
 free of Unreal calls to remain testable. UObject operations must run on the game thread
