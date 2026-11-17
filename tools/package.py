@@ -6,7 +6,7 @@ import zipfile
 
 VERSION = '0.1.0'
 MOD_FILES = ('enabled.txt', 'Scripts/main.lua', 'Scripts/config.lua',
-             'Scripts/card_model.lua', 'Scripts/card_view.lua')
+             'Scripts/card_model.lua', 'Scripts/card_view.lua', 'Scripts/f8_smoke.lua')
 PAYLOAD = tuple('Mods/BestiaryLens/' + name for name in MOD_FILES) + (
     'README.md', 'LICENSE')
 
