@@ -39,7 +39,7 @@ jobs:
         run: |
           docker run --rm --network none --env RELEASE_TAG --entrypoint python3 "$CI_IMAGE" -c '
           import os, sys
-          from package import VERSION
+          from tools.package import VERSION
           expected, actual = "v" + VERSION, os.environ["RELEASE_TAG"]
           print(f"Package version expects {expected}; pushed tag is {actual}")
           sys.exit(0 if actual == expected else 1)
@@ -86,13 +86,54 @@ jobs:
             --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
             --entrypoint bash "$CI_IMAGE" tools/release-notes.sh "$RELEASE_TAG"
 
+      - name: Select package artifacts
+        id: package-artifacts
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          import re
+          from tools.package import VERSION
+
+          safe_version = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,79}')
+          if not isinstance(VERSION, str) or not safe_version.fullmatch(VERSION):
+              raise SystemExit('Mod package version is invalid')
+
+          types_dir = Path('types')
+          pointer_path = types_dir / 'active.json'
+          if types_dir.is_symlink() or pointer_path.is_symlink() or not pointer_path.is_file():
+              raise SystemExit('Active SDK pointer is missing or unsafe')
+          pointer = json.loads(pointer_path.read_text(encoding='utf-8'))
+          version = pointer.get('version')
+          if pointer.get('schema') != 2 or not isinstance(version, str) or not safe_version.fullmatch(version):
+              raise SystemExit('Active SDK pointer has an invalid schema or version')
+
+          build = Path('build')
+          artifact_dir = build / 'types'
+          if build.is_symlink() or artifact_dir.is_symlink() or not artifact_dir.is_dir():
+              raise SystemExit('SDK artifact directory is missing or unsafe')
+          mod_package = build / f'BestiaryLens-{VERSION}.zip'
+          mod_checksum = build / f'BestiaryLens-{VERSION}.zip.sha256'
+          package = artifact_dir / f'QueensDomain-types-{version}.zip'
+          checksum = artifact_dir / f'QueensDomain-types-{version}.zip.sha256'
+          if any(path.is_symlink() or not path.is_file() for path in (mod_package, mod_checksum)):
+              raise SystemExit(f'Mod package or checksum is missing or unsafe: {VERSION}')
+          if any(path.is_symlink() or not path.is_file() for path in (package, checksum)):
+              raise SystemExit(f'Active SDK package or checksum is missing or unsafe: {version}')
+
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
+              output.write(f'mod_version={VERSION}\n')
+              output.write(f'sdk_version={version}\n')
+          PY
+
       - name: Upload mod package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: mod-${{ github.sha }}
           path: |
-            build/BestiaryLens-*.zip
-            build/BestiaryLens-*.zip.sha256
+            build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip
+            build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
@@ -103,8 +144,8 @@ jobs:
         with:
           name: sdk-${{ github.sha }}
           path: |
-            build/types/QueensDomain-types-*.zip
-            build/types/QueensDomain-types-*.zip.sha256
+            build/types/QueensDomain-types-${{ steps.package-artifacts.outputs.sdk_version }}.zip
+            build/types/QueensDomain-types-${{ steps.package-artifacts.outputs.sdk_version }}.zip.sha256
           if-no-files-found: error
           compression-level: 0
           retention-days: 30

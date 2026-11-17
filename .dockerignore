@@ -5,13 +5,11 @@
 !.github/workflows/
 !.github/workflows/*.yml
 !.dockerignore
+!cliff.toml
 !.luarc.json
 !.editorconfig
 !stylua.toml
-!tasks.py
-!package.py
-!deploy.py
-!sync_types.py
+!tools/*.py
 !tools/
 !tools/type_exporter.lua
 !types/

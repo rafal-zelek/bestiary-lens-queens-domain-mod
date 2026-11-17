@@ -64,7 +64,7 @@ def main():
     if args.host and args.host.startswith('-'):
         parser.error('SSH host cannot begin with a dash')
     from package import MOD_FILES
-    root = Path(__file__).resolve().parent / 'Mods' / MOD
+    root = Path(__file__).resolve().parents[1] / 'Mods' / MOD
     payload = {name: base64.b64encode((root/name).read_bytes()).decode() for name in MOD_FILES}
     if args.host:
         code = ('import base64,hashlib,json,tempfile,uuid\n'
@@ -77,7 +77,7 @@ def main():
         report = json.loads(result)
     else:
         report = install(args.ue4ss, payload)
-    local = Path(__file__).resolve().parent / 'build' / 'deployments'
+    local = Path(__file__).resolve().parents[1] / 'build' / 'deployments'
     local.mkdir(parents=True, exist_ok=True)
     manifest = local / (uuid.uuid4().hex + '.json')
     manifest.write_text(json.dumps(report, indent=2) + '\n')

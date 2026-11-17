@@ -114,5 +114,5 @@ WORKDIR /workspace
 
 FROM tooling AS ci
 COPY . .
-ENTRYPOINT ["python3", "-B", "/workspace/tasks.py"]
+ENTRYPOINT ["python3", "-B", "/workspace/tools/tasks.py"]
 CMD ["check"]

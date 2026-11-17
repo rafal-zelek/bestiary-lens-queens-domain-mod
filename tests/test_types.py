@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def module():
-    spec = importlib.util.spec_from_file_location('sync_types', ROOT / 'sync_types.py')
+    spec = importlib.util.spec_from_file_location('sync_types', ROOT / 'tools' / 'sync_types.py')
     obj = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(obj)
     return obj
@@ -168,9 +168,16 @@ Example['Pre-Destruction'] = function(self, x) end
 
     def test_archive_name_depends_only_on_game_version(self):
         self.api.import_types(self.root, payload())
+        (self.root / 'tools').mkdir(exist_ok=True)
+        (self.root / 'tools' / 'sync_types.py').write_text('# development helper')
+        (self.root / 'types/dev_helper.py').write_text('# development helper')
         target = self.api.package_version(self.root, '13540')
         self.assertEqual(target.name, 'QueensDomain-types-13540.zip')
         before = target.read_bytes()
+        with zipfile.ZipFile(target) as archive:
+            self.assertFalse(any(name.endswith('.py') for name in archive.namelist()))
+            self.assertEqual(set(archive.namelist()), {
+                'manifest.json', 'bindings/runtime/Game.lua'})
         self.api.import_types(self.root, payload())
         self.api.package_version(self.root, '13540')
         self.assertEqual(before, target.read_bytes())

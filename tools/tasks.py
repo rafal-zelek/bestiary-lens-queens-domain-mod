@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 LUA_DIRS = ('Mods/BestiaryLens/Scripts', 'tests', 'tools')
 TASKS = ('format', 'format-check', 'lint', 'test', 'check', 'package', 'types-verify', 'types-package', 'workflow-lint')
 
@@ -28,10 +28,10 @@ def commands(task):
     elif task == 'test':
         yield [sys.executable, '-B', str(ROOT / 'tests' / 'run.py')]
     elif task in ('types-verify', 'types-package'):
-        yield [sys.executable, '-B', str(ROOT / 'sync_types.py'),
+        yield [sys.executable, '-B', str(ROOT / 'tools' / 'sync_types.py'),
                'verify' if task == 'types-verify' else 'package']
     elif task == 'package':
-        yield [sys.executable, '-B', str(ROOT / 'package.py')]
+        yield [sys.executable, '-B', str(ROOT / 'tools' / 'package.py')]
 
 
 def main(argv=None):

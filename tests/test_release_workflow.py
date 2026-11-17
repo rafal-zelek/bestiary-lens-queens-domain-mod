@@ -157,6 +157,86 @@ class ReleaseWorkflowTests(unittest.TestCase):
                         )
                         self.assertEqual(allowed, expected and check_result and ready)
 
+    def test_package_artifact_selection_uses_only_exact_safe_versions(self):
+        script = inline_run_block(
+            self.source, 'Select package artifacts', 'import json', closing_marker='PY',
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            active = root / 'types/active.json'
+            active.parent.mkdir(parents=True)
+            tools = root / 'tools'
+            tools.mkdir()
+            package_source = tools / 'package.py'
+            package_source.write_text("VERSION = '0.1.0'\n")
+            artifacts = root / 'build/types'
+            artifacts.mkdir(parents=True)
+            active.write_text('{"schema": 2, "version": "13540"}\n')
+            mod_artifacts = root / 'build'
+            (mod_artifacts / 'BestiaryLens-0.1.0.zip').write_bytes(b'zip')
+            (mod_artifacts / 'BestiaryLens-0.1.0.zip.sha256').write_text('checksum')
+            (mod_artifacts / 'BestiaryLens-0.0.9.zip').write_bytes(b'stale zip')
+            (mod_artifacts / 'BestiaryLens-0.0.9.zip.sha256').write_text('stale checksum')
+            for version in ('13540', '13539'):
+                (artifacts / f'QueensDomain-types-{version}.zip').write_bytes(b'zip')
+                (artifacts / f'QueensDomain-types-{version}.zip.sha256').write_text('checksum')
+            output = root / 'github-output'
+            result = subprocess.run(
+                [os.environ.get('PYTHON', 'python3'), '-c', script], cwd=root,
+                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
+                capture_output=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(output.read_text(), 'mod_version=0.1.0\nsdk_version=13540\n')
+
+            package_source.write_text("VERSION = '../escape'\n")
+            output.write_text('')
+            result = subprocess.run(
+                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
+                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
+                capture_output=True, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(output.read_text(), '')
+
+            package_source.write_text("VERSION = '0.1.0'\n")
+            active.write_text('{"schema": 2, "version": "../outside"}\n')
+            output.write_text('')
+            result = subprocess.run(
+                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
+                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
+                capture_output=True, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(output.read_text(), '')
+
+            active.write_text('{"schema": 2, "version": "13540"}\n')
+            (artifacts / 'QueensDomain-types-13540.zip.sha256').unlink()
+            result = subprocess.run(
+                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
+                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
+                capture_output=True, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(output.read_text(), '')
+
+            active.unlink()
+            outside_pointer = root / 'outside-pointer.json'
+            outside_pointer.write_text('{"schema": 2, "version": "13540"}\n')
+            active.symlink_to(outside_pointer)
+            result = subprocess.run(
+                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
+                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
+                capture_output=True, check=False,
+            )
+            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(output.read_text(), '')
+
+        self.assertIn('build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip', self.source)
+        self.assertIn('build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip.sha256', self.source)
+        self.assertIn('build/types/QueensDomain-types-${{ steps.package-artifacts.outputs.sdk_version }}.zip', self.source)
+        self.assertIn('build/types/QueensDomain-types-${{ steps.package-artifacts.outputs.sdk_version }}.zip.sha256', self.source)
+
 
 if __name__ == '__main__':
     unittest.main()
