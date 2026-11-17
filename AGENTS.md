@@ -124,6 +124,8 @@ tests are not proof of in-game behavior.
 
 ## Committing
 
+- Commit every completed agent change separately, following the git-cliff Conventional Commit
+  rules described below and after running the relevant checks.
 - Commit on **small working achievements**: as soon as a focused change is implemented and its
   relevant checks pass, commit it. Do not batch unrelated edits into one commit or leave verified
   work uncommitted while starting the next task. Keep runtime, tooling, tests and docs as separate
