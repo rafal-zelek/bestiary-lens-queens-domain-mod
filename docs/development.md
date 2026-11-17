@@ -78,8 +78,24 @@ On Windows, use the corresponding Windows path for local installation.
 The tool stages the complete mod outside `Mods`, backs up any previous `BestiaryLens` directory
 under `ue4ss/bestiary-lens-backups/`, installs the new directory and verifies SHA-256 readback.
 It preserves other mods and loader settings. Deployment reports stay in ignored `build/deployments/`.
-The final directory switch is not a filesystem transaction; run with the game stopped.
-The tool does not start/restart the game or enable hot reload.
+For this helper's complete directory replacement, the final switch is not a filesystem transaction;
+the supported deployment procedure is to stop the game first. The tool does not start/restart
+the game or enable hot reload. Individual Lua changes can instead be made while the game is
+running when UE4SS hot reload is configured, but hot reload can hang the game; verify the
+loaded version and behavior rather than assuming a file write took effect.
+
+Before remote deployment, check access from the same environment that will run the helper:
+
+```sh
+ssh -o BatchMode=yes -o ConnectTimeout=8 -o StrictHostKeyChecking=yes YOUR_SSH_ALIAS 'id -un'
+```
+
+A route failure indicates a network reachability problem; an authentication failure means the
+host was reached but did not accept the available credentials. Check the alias, network,
+SSH identity and agent access in that environment; do not assume a previously working connection
+is still available. For the helper's directory replacement, verify the game has exited;
+do not stop or restart it without the user's approval. A successful SSH check does not establish
+that the game is stopped.
 
 ### Editor and type checking
 
