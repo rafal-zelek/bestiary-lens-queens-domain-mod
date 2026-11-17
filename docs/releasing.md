@@ -4,9 +4,10 @@
 
 `.github/workflows/ci.yml` runs on pull requests, pushes to `main`, and manual **Run workflow**.
 `.github/workflows/release.yml` runs on pushes of tags starting with `v`. Both use the shared
-validation workflow: it builds the Docker image, validates formatting and SDK integrity,
-lints workflows and Lua, runs tests, then builds the mod package. A manual CI run against a tag
-validates it but never publishes a release.
+validation workflow, which runs three independent jobs in parallel: `code-quality` (StyLua, LuaLS,
+SDK integrity and actionlint), `tests` (Python, Lua and release-notes generation) and `package`
+(mod ZIP, checksum and release notes). A manual CI run against a tag validates it but never
+publishes a release.
 All project tooling, including actionlint, git-cliff and SSH, is in the Dockerfile.
 GitHub actions are pinned to commit SHAs. CI uses `contents: read`; tag publication jobs receive
 `contents: write` only where needed to create a GitHub Release or add the Nexus attempt marker.
@@ -16,9 +17,9 @@ Successful runs expose a downloadable package artifact:
 
 - `mod-<commit-sha>`: the installable mod ZIP and its SHA-256 sidecar.
 
-The package is kept for 30 days; available LuaLS logs are uploaded even on failure and kept for 7 days.
-After a version-tag push passes validation, the release workflow creates a GitHub Release with the
-mod ZIP, its SHA-256 sidecar, and generated or curated release notes. The SDK remains tracked source data.
+The package is kept for 30 days. After a version-tag push passes validation, the release workflow
+creates a GitHub Release with the mod ZIP, its SHA-256 sidecar, and generated or curated release
+notes. The SDK remains tracked source data.
 
 ### Release procedure
 

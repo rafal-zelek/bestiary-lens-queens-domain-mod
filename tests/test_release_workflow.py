@@ -98,6 +98,20 @@ class WorkflowStructureTests(unittest.TestCase):
         self.assertEqual(len(self.ci_jobs), 1)
         self.assertNotRegex(self.ci + self.validate, r'(?i)(publish-github-release|publish-nexus|Nexus-Mods/upload-action|gh release)')
 
+    def test_validation_splits_into_parallel_jobs(self):
+        self.assertEqual(set(self.validate_jobs), {'code-quality', 'tests', 'package'})
+        for name, job in self.validate_jobs.items():
+            with self.subTest(job=name):
+                self.assertNotRegex(job, r'(?m)^    needs:')
+        self.assertRegex(self.validate_jobs['code-quality'], r'(?<![\w-])lint(?![\w-])')
+        self.assertIn('tools/test-git-cliff.sh', self.validate_jobs['tests'])
+        self.assertIn('tools/release-notes.sh', self.validate_jobs['package'])
+        # LuaLS diagnostics still run, but their logs are no longer uploaded as artifacts.
+        luals_uploads = [name for job in self.validate_jobs.values()
+                         for name in artifact_names(job, 'actions/upload-artifact')
+                         if name.startswith('luals-')]
+        self.assertEqual(luals_uploads, [])
+
     def test_publish_order_and_privileges(self):
         validation = next(k for k, v in self.release_jobs.items() if './.github/workflows/_validate.yml' in v)
         github = next(k for k, v in self.release_jobs.items() if re.search(r'(?i)gh release (?:create|edit|upload)', v))
