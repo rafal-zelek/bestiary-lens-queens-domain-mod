@@ -1,6 +1,6 @@
 -- BestiaryLens: contextual bestiary card. All UE access stays on game thread.
 local TAG = '[BestiaryLens] '
-local RUNTIME_MARKER = 'F8-SCRIPT-20261117-07'
+local RUNTIME_MARKER = 'F8-SCRIPT-20261118-08'
 local Config = require('config')
 local Model = require('card_model')
 local CardView = require('card_view')
@@ -29,31 +29,6 @@ local function valid(o)
 end
 local function log(s)
     print(TAG .. tostring(s) .. '\n')
-end
-local function debugScreen(message, context)
-    log(RUNTIME_MARKER .. ' ' .. message)
-    if not context then
-        return
-    end
-    local ok, err = pcall(function()
-        local helpers = StaticFindObject('/Script/FB_Utils.Default__FB_BPHelpers') --[[@as UFB_BPHelpers]]
-        if helpers and helpers:IsValid() then
-            helpers:FB_PrintString(
-                context,
-                RUNTIME_MARKER .. ' ' .. message,
-                true,
-                true,
-                true,
-                { R = 1, G = 0.75, B = 0.1, A = 1 },
-                8
-            )
-        else
-            error('FB_BPHelpers default object unavailable')
-        end
-    end)
-    if not ok then
-        log('screen message failed: ' .. tostring(err))
-    end
 end
 local function attempt(fn, fallback)
     local ok, v = pcall(fn)
@@ -855,22 +830,11 @@ RegisterKeyBind(Key.F9, function()
         shown = not shown
     end)
 end)
-RegisterKeyBind(Key.F8, function()
-    ExecuteInGameThread(function()
-        log(RUNTIME_MARKER .. ' F8 handler active')
-        local ok, err = pcall(function()
-            require('f8_smoke')({
-                valid = valid,
-                log = log,
-                debugScreen = debugScreen,
-                getTarget = function()
-                    return currentTarget
-                end,
-            })
-        end)
-        if not ok then
-            log('F8 two-mob test failed: ' .. tostring(err))
-        end
-    end)
-end)
+require('sdk.domain.game').bindSmokeTest({
+    log = log,
+    marker = RUNTIME_MARKER,
+    readLensTarget = function()
+        return currentTarget
+    end,
+}, require('f8_smoke'))
 log('BestiaryLens 0.1.0 loaded; runtime=' .. RUNTIME_MARKER .. '; waiting for gameplay HUD')

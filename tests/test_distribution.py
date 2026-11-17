@@ -1,5 +1,6 @@
 import importlib.util
 import pathlib
+import re
 import tempfile
 import unittest
 import zipfile
@@ -28,6 +29,16 @@ class DistributionTests(unittest.TestCase):
             with zipfile.ZipFile(archive) as z:
                 self.assertEqual(set(z.namelist()), set(release.PAYLOAD))
                 self.assertFalse(any(name.endswith('.py') for name in z.namelist()))
+
+    def test_high_level_scripts_cannot_import_engine_modules_directly(self):
+        scripts = ROOT / 'Mods/BestiaryLens/Scripts'
+        direct_require = re.compile(r"""\brequire\s*\(?\s*['"]sdk[./]engine[./]""")
+        domain_adapter = scripts / 'sdk/domain/game.lua'
+        engine_directory = scripts / 'sdk/engine'
+        for file in scripts.rglob('*.lua'):
+            if file != domain_adapter and engine_directory not in file.parents:
+                with self.subTest(file=file.relative_to(scripts)):
+                    self.assertNotRegex(file.read_text(), direct_require)
 
     def test_deploy_preserves_other_mods_and_backs_up_previous_version(self):
         deploy = module('deploy')
