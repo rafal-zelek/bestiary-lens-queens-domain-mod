@@ -8,7 +8,6 @@ import shutil
 import subprocess
 import tempfile
 import unittest
-import zipfile
 from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -166,22 +165,23 @@ Example['Pre-Destruction'] = function(self, x) end
         (self.root / '.luarc.json').write_text(json.dumps(config))
         with self.assertRaises(ValueError): self.api.verify_active(self.root)
 
-    def test_archive_name_depends_only_on_game_version(self):
-        self.api.import_types(self.root, payload())
-        (self.root / 'tools').mkdir(exist_ok=True)
-        (self.root / 'tools' / 'sync_types.py').write_text('# development helper')
-        (self.root / 'types/dev_helper.py').write_text('# development helper')
-        target = self.api.package_version(self.root, '13540')
-        self.assertEqual(target.name, 'QueensDomain-types-13540.zip')
-        before = target.read_bytes()
-        with zipfile.ZipFile(target) as archive:
-            self.assertFalse(any(name.endswith('.py') for name in archive.namelist()))
-            self.assertEqual(set(archive.namelist()), {
-                'manifest.json', 'bindings/runtime/Game.lua'})
-        self.api.import_types(self.root, payload())
-        self.api.package_version(self.root, '13540')
-        self.assertEqual(before, target.read_bytes())
-        self.assertEqual(hashlib.sha256(before).hexdigest(), target.with_suffix('.zip.sha256').read_text().split()[0])
+    def test_fetch_imports_and_activates_without_archives(self):
+        data = payload()
+        data['files']['api/UE4SS.d.lua'] = data['files']['runtime/Game.lua'].copy()
+        license_file = self.root / 'types/licenses/UE4SS-cdbc0b66.txt'
+        license_file.parent.mkdir(parents=True)
+        license_file.write_text('MIT License\nCopyright fixture\n')
+        with patch.object(self.api, 'ROOT', self.root), patch.object(self.api, 'ssh_call', return_value=data):
+            self.assertEqual(self.api.main(['fetch', '--host', 'deck', '--ue4ss', '/ue4ss']), 0)
+        self.api.verify_active(self.root)
+        self.assertTrue((self.root / 'build/types/last-export.json').is_file())
+        self.assertFalse(list(self.root.rglob('*.zip')))
+        self.assertFalse(list(self.root.rglob('*.zip.sha256')))
+
+    def test_package_command_is_rejected(self):
+        with self.assertRaises(SystemExit) as error:
+            self.api.main(['package'])
+        self.assertEqual(error.exception.code, 2)
 
     def test_interrupted_directory_swap_restores_previous_aggregate(self):
         directory = self.api.import_types(self.root, payload())
@@ -212,14 +212,13 @@ Example['Pre-Destruction'] = function(self, x) end
         self.assertEqual(before, (self.root / '.luarc.json').read_bytes())
         self.api.verify_active(self.root)
 
-    def test_missing_upstream_license_blocks_verification_and_package(self):
+    def test_missing_upstream_license_blocks_verification(self):
         p = payload(); p['files']['api/UE4SS.d.lua'] = p['files']['runtime/Game.lua'].copy()
         self.api.import_types(self.root, p)
         license_file = self.root / 'types/licenses/UE4SS-cdbc0b66.txt'
         license_file.parent.mkdir(parents=True); license_file.write_text('MIT License\nCopyright fixture\n')
         self.api.activate_version(self.root, '13540')
         license_file.unlink()
-        with self.assertRaises(ValueError): self.api.package_version(self.root, '13540')
         with self.assertRaises(ValueError): self.api.verify_active(self.root)
 
 

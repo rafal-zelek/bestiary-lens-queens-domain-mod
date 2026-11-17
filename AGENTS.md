@@ -54,7 +54,7 @@ docker run --rm --network none bestiary-lens-ci <task>
 ```
 
 `check` = `format-check` → `types-verify` → `workflow-lint` → `lint` (LuaLS at Warning+) →
-`test`, stopping on first failure. `package` and `types-package` build the release ZIPs but do
+`test`, stopping on first failure. `package` builds the mod release ZIP but does
 **not** imply `check`. Reports and artifacts land in `build/`; without a bind mount they vanish
 with the container. For working-tree sources and persistent output, bind-mount the repo; see
 `docs/development.md` for exact flags.
@@ -62,10 +62,10 @@ with the container. For working-tree sources and persistent output, bind-mount t
 Without Docker, with the same tools in PATH (Python 3.9+):
 
 ```sh
-python3 -B tools/tasks.py <format|format-check|lint|test|check|package|types-verify|types-package|workflow-lint>
+python3 -B tools/tasks.py <format|format-check|lint|test|check|package|types-verify|workflow-lint>
 python3 -B tests/run.py --host YOUR_SSH_ALIAS   # run Lua tests over SSH
 python3 tools/deploy.py --ue4ss "/path/to/ue4ss" [--host YOUR_SSH_ALIAS]
-python3 -B tools/sync_types.py <install-helper|fetch|activate|verify|package> ...
+python3 -B tools/sync_types.py <install-helper|fetch|activate|verify> ...
 ```
 
 `tools/tasks.py` resolves the repo from its own path (cwd-independent), runs subprocesses without
@@ -114,7 +114,7 @@ tests are not proof of in-game behavior.
   its own version and must not be renamed to the mod version. See `docs/releasing.md`.
 - Release ZIPs use explicit allowlists (`tools/package.py` `MOD_FILES`); `tools/deploy.py`
   imports that same list. Adding a runtime file means adding it to `MOD_FILES`. Development
-  tools, debug files and private data must never enter either ZIP. Verify members and checksums.
+  tools, debug files and private data must never enter the mod ZIP. Verify members and checksums.
 - Deploy with the game stopped; the helper stages outside `Mods`, backs up any prior mod under
   `ue4ss/bestiary-lens-backups/`, verifies SHA-256, and never starts/restarts the game.
 - `AGENTS.md` and `CLAUDE.md` are listed in `.gitignore` (they are treated as local notes);

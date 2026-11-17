@@ -143,28 +143,26 @@ It refuses forced asset loading. Coverage is **currently loaded reflected object
 loading another level or opening a menu can expose additional types.
 If the installed UE4SS base API file is absent, it is fetched from the exact loader source commit;
 this origin is recorded separately from runtime-generated files. The matching UE4SS MIT license
-is retained under `types/licenses/` and included in the type archive.
+is retained under `types/licenses/` and verified with the active SDK.
 The original remote dump and backups are preserved; a local transfer record stays under `build/types/`.
 
 `<game-version>` is the installed game's `version.txt` label, not an inferred Steam BuildID
-or semantic version. EXE/loader hashes do not select directories or archive names.
+or semantic version. EXE/loader hashes do not select directories.
 Captures of the same game version always update the same aggregate and retain declarations
 that are absent from a later capture. Reimporting the same declarations is a no-op.
 
 A new game version creates a new directory and switches LuaLS, retaining the prior game version.
 Only these version switches produce a report under `types/migrations/`; individual captures
 of one version do not create migration history. Other LuaLS library settings are preserved.
-The archive is `build/types/QueensDomain-types-<game-version>.zip` plus its `.sha256` sidecar.
 Run the full check after importing or switching versions. API/code changes remain a separate task.
 
 ```sh
 python3 -B tools/tasks.py types-verify
-python3 -B tools/tasks.py types-package
 python3 -B tools/sync_types.py activate --version 13540
 ```
 
 `types/` contents are project source data and are **not ignored by Git**.
-Only generated archives, transfer records and temporary tooling output belong in ignored `build/`.
+Only generated mod archives, transfer records and temporary tooling output belong in ignored `build/`.
 To use the sync tool from Docker, override the runner entrypoint and supply SSH authentication
 at runtime; credentials are not baked into the image. For example, with a POSIX shell and
 key-based SSH configuration available in `~/.ssh`:
@@ -184,10 +182,10 @@ The helper is a development tool and is excluded from the release mod package.
 
 `tools/package.py` (with `VERSION` defined in that file) builds `build/BestiaryLens-0.1.0.zip` and its `.zip.sha256` sidecar
 from an explicit allowlist. The install ZIP contains the mod payload plus the user README and
-`LICENSE`; it excludes `tools/deploy.py`, `tools/package.py` and all other development/debug tools. The separate
-SDK ZIP contains its manifest, integrity-verified bindings and required UE4SS license, with no Python
-tools. Tests, tooling/configuration files, private notes, logs, backup data and Git metadata do not
-enter either ZIP.
+`LICENSE`; it excludes `tools/deploy.py`, `tools/package.py` and all other development/debug tools.
+The SDK, its manifest and UE4SS license are tracked source data, not a separate package.
+Tests, tooling/configuration files, private notes, logs, backup data and Git metadata do not
+enter the ZIP.
 The tests cover targeting geometry, hover timing, unlock gates, loot edge cases, native text identity,
 widget names, presentation data, package exclusion, installation backup/preservation and CI runner failure handling.
 They do not replace an in-game screenshot or a controller test.

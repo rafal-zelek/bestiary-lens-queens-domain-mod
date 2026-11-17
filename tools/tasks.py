@@ -7,7 +7,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 LUA_DIRS = ('Mods/BestiaryLens/Scripts', 'tests', 'tools')
-TASKS = ('format', 'format-check', 'lint', 'test', 'check', 'package', 'types-verify', 'types-package', 'workflow-lint')
+TASKS = ('format', 'format-check', 'lint', 'test', 'check', 'package', 'types-verify', 'workflow-lint')
 
 
 def commands(task):
@@ -18,7 +18,8 @@ def commands(task):
         options = ['--verify'] if task == 'format' else ['--check']
         yield ['stylua', '--config-path', str(ROOT / 'stylua.toml'), *options, *LUA_DIRS]
     elif task == 'workflow-lint':
-        yield ['actionlint', str(ROOT / '.github/workflows/ci.yml')]
+        yield ['actionlint', *(str(ROOT / '.github/workflows' / name)
+                               for name in ('ci.yml', 'release.yml', '_validate.yml'))]
     elif task == 'lint':
         report = ROOT / 'build' / 'luals'
         report.mkdir(parents=True, exist_ok=True)
@@ -27,9 +28,9 @@ def commands(task):
                '--metapath=' + str(report / 'meta')]
     elif task == 'test':
         yield [sys.executable, '-B', str(ROOT / 'tests' / 'run.py')]
-    elif task in ('types-verify', 'types-package'):
+    elif task == 'types-verify':
         yield [sys.executable, '-B', str(ROOT / 'tools' / 'sync_types.py'),
-               'verify' if task == 'types-verify' else 'package']
+               'verify']
     elif task == 'package':
         yield [sys.executable, '-B', str(ROOT / 'tools' / 'package.py')]
 

@@ -16,7 +16,6 @@ import sys
 import tempfile
 import urllib.request
 import uuid
-import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 HELPER = 'BestiaryLensTypeExport'
@@ -323,30 +322,6 @@ def verify_active(root):
     return manifest
 
 
-def package_version(root, version):
-    root = Path(root).resolve()
-    directory = version_path(root, version)
-    manifest = verify_version(directory)
-    licenses = licenses_for(root, manifest)
-    target = root / 'build/types' / ('QueensDomain-types-' + version + '.zip')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    members = {'manifest.json': directory / 'manifest.json'}
-    members.update({'bindings/' + n: directory / 'bindings' / n for n in sorted(manifest['files'])})
-    for file in licenses:
-        name = 'LICENSE-UE4SS.txt' if len(licenses) == 1 else 'licenses/' + file.name
-        members[name] = file
-    temporary = target.with_suffix('.zip.tmp')
-    with zipfile.ZipFile(temporary, 'w', zipfile.ZIP_DEFLATED) as archive:
-        for name, source in members.items():
-            info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
-            info.external_attr = 0o100644 << 16
-            archive.writestr(info, source.read_bytes())
-    temporary.replace(target)
-    target.with_suffix('.zip.sha256').write_text(digest(target.read_bytes()) + '  ' + target.name + '\n')
-    return target
-
-
 def remote_export(ue4ss, timeout=60):
     """Self-contained code shipped to the Deck over SSH; no remote dependencies."""
     import base64
@@ -482,7 +457,7 @@ def main(argv=None):
         command.add_argument('--ue4ss', required=True)
         if name == 'fetch':
             command.add_argument('--timeout', type=int, default=60)
-    for name in ['verify', 'activate', 'package']:
+    for name in ['verify', 'activate']:
         command = sub.add_parser(name)
         command.add_argument('--version', help='Game version; defaults to active SDK')
     args = parser.parse_args(argv)
@@ -525,12 +500,12 @@ def main(argv=None):
             directory = import_types(ROOT, payload)
             version = payload['game']['version']
             migration = activate_version(ROOT, version)
-            archive = package_version(ROOT, version)
+            manifest = verify_version(directory)
+            licenses_for(ROOT, manifest)
             print('SDK:', directory.relative_to(ROOT))
-            print('Aggregated files:', len(verify_version(directory)['files']), '| newer conflicting declarations win')
+            print('Aggregated files:', len(manifest['files']), '| newer conflicting declarations win')
             print('Migration:', migration.get('id', 'same version' if migration.get('already_active') else 'initial activation'), '| added:', len(migration['added']),
                   'removed:', len(migration['removed']), 'changed:', len(migration['changed']))
-            print('Archive:', archive.relative_to(ROOT))
             return 0
         version = args.version or active_version(ROOT)
         directory = version_path(ROOT, version)
@@ -539,8 +514,6 @@ def main(argv=None):
             print('SDK verified:', manifest['game_version'], len(manifest['files']), 'files')
         elif args.command == 'activate':
             print(json.dumps(activate_version(ROOT, version), indent=2))
-        else:
-            print(package_version(ROOT, version))
         return 0
     except (OSError, ValueError, KeyError, RuntimeError, subprocess.CalledProcessError) as error:
         print('Type sync failed: ' + str(error), file=sys.stderr)

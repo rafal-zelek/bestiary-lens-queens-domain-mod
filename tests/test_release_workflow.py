@@ -1,241 +1,275 @@
-"""Offline structural checks for the privileged release workflow."""
+"""Offline checks for the separation between validation and publishing."""
 from pathlib import Path
 import os
 import re
 import subprocess
+import shutil
 import tempfile
 import textwrap
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / '.github' / 'workflows' / 'ci.yml'
+WORKFLOWS = ROOT / '.github' / 'workflows'
 
 
-def job_section(source, name, following):
-    return source.split(f'  {name}:', 1)[1].split(f'  {following}:', 1)[0]
+def section(source, key, indent=0):
+    """Return an indentation-delimited YAML mapping entry, including its header."""
+    lines = source.splitlines()
+    pattern = re.compile(r'^' + ' ' * indent + re.escape(key) + r':(?:\s|$)')
+    starts = [i for i, line in enumerate(lines) if pattern.match(line)]
+    if len(starts) != 1:
+        raise AssertionError(f'Expected exactly one {key!r} at indentation {indent}; got {len(starts)}')
+    start = starts[0]
+    end = start + 1
+    while end < len(lines):
+        line = lines[end]
+        if line.strip() and not line.lstrip().startswith('#') and len(line) - len(line.lstrip()) <= indent:
+            break
+        end += 1
+    return '\n'.join(lines[start:end])
 
 
-def condition(section):
-    match = re.search(r'(?m)^    if: (.+)$', section)
+def jobs(source):
+    block = section(source, 'jobs')
+    return {m.group(1): section(block, m.group(1), 2)
+            for m in re.finditer(r'(?m)^  ([\w-]+):\s*$', block)}
+
+
+def needs(job):
+    match = re.search(r'(?m)^    needs:\s*(.+)$', job)
     if not match:
-        raise AssertionError('job has no if condition')
-    return match.group(1)
+        return set()
+    return set(re.findall(r'[\w-]+', match.group(1)))
 
 
-def evaluate_github_condition(expression, event, ref, nexus_ready=False, needs_succeeded=True):
-    """Evaluate only the workflow expression atoms used by the release job guards."""
-    if not needs_succeeded:
-        return False
-    values = {
-        "github.event_name == 'push'": event == 'push',
-        "needs.publish-github-release.outputs.nexus_ready == 'true'": nexus_ready,
-    }
-    result = True
-    for atom in expression.split(' && '):
-        if atom in values:
-            result = result and values[atom]
-            continue
-        match = re.fullmatch(r"startsWith\(github\.ref, '([^']+)'\)", atom)
+def action_steps(job, action):
+    return [s for s in re.split(r'(?m)^      - ', job)[1:]
+            if re.search(r'(?m)^\s*uses:\s*' + re.escape(action) + r'@', s)]
+
+
+def artifact_names(job, action):
+    result = []
+    for step in action_steps(job, action):
+        match = re.search(r'(?m)^\s+name:\s*(.+?)\s*$', step)
         if match:
-            result = result and ref.startswith(match.group(1))
-            continue
-        raise AssertionError(f'Unsupported GitHub expression atom: {atom}')
+            result.append(match.group(1).strip("'\""))
     return result
 
 
-def inline_run_block(source, step_name, first_line, closing_marker="'"):
+def inline_script(source, step_name, first_line, end_marker):
     step = source.split(f'      - name: {step_name}', 1)[1].split('      - name:', 1)[0]
     lines = step.splitlines()
     start = next(i for i, line in enumerate(lines) if line.strip() == first_line)
-    end = (
-        next(i for i in range(start + 1, len(lines)) if lines[i].strip() == closing_marker)
-        if closing_marker else len(lines)
-    )
+    end = next((i for i in range(start + 1, len(lines)) if lines[i].strip() == end_marker), len(lines))
     return textwrap.dedent('\n'.join(lines[start:end]))
 
 
-def credentials_ready(script, mask, output_path):
-    values = {
-        'NEXUS_API_KEY': 'key' if mask & 1 else '',
-        'NEXUS_FILE_ID': 'file' if mask & 2 else '',
-        'NEXUS_MOD_ID': 'mod' if mask & 4 else '',
-        'GITHUB_OUTPUT': str(output_path),
-    }
-    result = subprocess.run(
-        ['bash', '-euo', 'pipefail', '-c', script],
-        env=os.environ | values, text=True, capture_output=True, check=False,
-    )
-    if result.returncode:
-        raise AssertionError(result.stderr)
-    return output_path.read_text() == 'ready=true\n'
-
-
-class ReleaseWorkflowTests(unittest.TestCase):
+class WorkflowStructureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.source = WORKFLOW.read_text()
-        cls.github_job = job_section(cls.source, 'publish-github-release', 'publish-nexus')
-        cls.nexus_job = cls.source.split('  publish-nexus:', 1)[1]
+        cls.ci = (WORKFLOWS / 'ci.yml').read_text()
+        cls.release = (WORKFLOWS / 'release.yml').read_text()
+        cls.validate = (WORKFLOWS / '_validate.yml').read_text()
+        cls.ci_jobs = jobs(cls.ci)
+        cls.release_jobs = jobs(cls.release)
+        cls.validate_jobs = jobs(cls.validate)
 
-    def test_missing_credentials_skip_the_entire_nexus_job(self):
-        self.assertIn("if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && needs.publish-github-release.outputs.nexus_ready == 'true'", self.nexus_job)
-        self.assertIn('nexus_ready: ${{ steps.publisher-readiness.outputs.ready }}', self.source)
-        self.assertIn("echo 'ready=true' >> \"$GITHUB_OUTPUT\"", self.source)
-        self.assertIn("echo 'ready=false' >> \"$GITHUB_OUTPUT\"", self.source)
-        self.assertNotIn('NEXUS_API_KEY', self.source.split('outputs:', 1)[1].split('steps:', 1)[0])
-        steps = self.nexus_job.split('      - name: ')[1:]
-        self.assertEqual(len(steps), 8)
+    def test_triggers_are_separate(self):
+        ci_on = section(self.ci, 'on')
+        self.assertRegex(ci_on, r'(?m)^  pull_request:\s*$')
+        self.assertRegex(ci_on, r'(?m)^  workflow_dispatch:\s*$')
+        push = section(ci_on, 'push', 2)
+        self.assertRegex(push, r'(?m)^    branches:\s*\[\s*[\'"]?main[\'"]?\s*\]')
+        self.assertNotRegex(push, r'(?m)^    tags(?:-ignore)?:')
+        release_on = section(self.release, 'on')
+        self.assertRegex(release_on, r'(?m)^  push:\s*$')
+        self.assertRegex(section(release_on, 'push', 2), r"(?m)^    tags:\s*\[\s*['\"]v\*['\"]\s*\]")
+        self.assertNotRegex(release_on, r'(?m)^  (pull_request|workflow_dispatch):')
+        self.assertRegex(section(self.validate, 'on'), r'(?m)^  workflow_call:\s*$')
+        self.assertNotRegex(section(self.validate, 'on'), r'(?m)^  (push|pull_request|workflow_dispatch):')
 
-    def test_attempt_marker_precedes_the_only_upload_action(self):
-        marker = self.nexus_job.index('name: Record Nexus attempt marker')
-        upload = self.nexus_job.index('uses: Nexus-Mods/upload-action@')
-        page = self.nexus_job.index('name: Update Nexus page description')
-        self.assertLess(marker, upload)
-        self.assertLess(upload, page)
-        self.assertEqual(self.nexus_job.count('uses: Nexus-Mods/upload-action@'), 1)
-        self.assertIn('98532f7670c27cbecc78fae03fa3e278147827e2', self.nexus_job)
+    def test_ci_and_release_call_shared_validation(self):
+        for name, job_map in [('CI', self.ci_jobs), ('release', self.release_jobs)]:
+            calls = [key for key, job in job_map.items()
+                     if re.search(r'(?m)^    uses:\s*\./\.github/workflows/_validate\.yml\s*$', job)]
+            with self.subTest(workflow=name):
+                self.assertEqual(len(calls), 1)
+        # PRs cannot reach a publisher, even if a condition is accidentally relaxed.
+        self.assertEqual(len(self.ci_jobs), 1)
+        self.assertNotRegex(self.ci + self.validate, r'(?i)(publish-github-release|publish-nexus|Nexus-Mods/upload-action|gh release)')
 
-    def test_tag_runs_are_not_cancelled_and_privilege_is_job_scoped(self):
-        self.assertIn('cancel-in-progress: ${{ github.ref_type != \'tag\' }}', self.source)
-        self.assertIn('publish-github-release:\n    name: Publish GitHub release\n    if: github.event_name == \'push\' && startsWith(github.ref, \'refs/tags/v\')\n    needs: check-and-package\n    runs-on: ubuntu-24.04\n    timeout-minutes: 10\n    permissions:\n      contents: write', self.source)
-        self.assertIn('permissions:\n  contents: read', self.source)
-        self.assertIn('needs: publish-github-release', self.nexus_job)
-        github_job = self.source.split('  publish-github-release:', 1)[1].split('  publish-nexus:', 1)[0]
-        self.assertIn('needs: check-and-package', github_job)
-        self.assertNotIn('publish-nexus', github_job)
-        self.assertIn('uses: actions/checkout@', github_job)
-        self.assertIn('run: bash tools/verify-github-release.sh "$RELEASE_TAG"', github_job)
+    def test_publish_order_and_privileges(self):
+        validation = next(k for k, v in self.release_jobs.items() if './.github/workflows/_validate.yml' in v)
+        github = next(k for k, v in self.release_jobs.items() if re.search(r'(?i)gh release (?:create|edit|upload)', v))
+        nexus = next(k for k, v in self.release_jobs.items() if 'Nexus-Mods/upload-action@' in v)
+        self.assertIn(validation, needs(self.release_jobs[github]))
+        self.assertIn(github, needs(self.release_jobs[nexus]))
+        self.assertNotIn(nexus, needs(self.release_jobs[github]))
+        self.assertRegex(section(self.ci, 'permissions'), r'(?m)^  contents: read\s*$')
+        self.assertRegex(section(self.release, 'permissions'), r'(?m)^  contents: read\s*$')
+        self.assertRegex(section(self.validate, 'permissions'), r'(?m)^  contents: read\s*$')
+        for name, job in self.release_jobs.items():
+            if name in (github, nexus):
+                self.assertRegex(job, r'(?m)^      contents: write\s*$')
+            else:
+                self.assertNotRegex(job, r'(?m)^\s+contents: write\s*$')
+        self.assertNotRegex(self.ci + self.validate, r'(?m)^\s+contents: write\s*$')
+        self.assertRegex(self.release_jobs[nexus], r"(?m)^    if:.*needs\.[\w-]+\.outputs\.[\w-]+\s*==\s*['\"]true['\"]")
+        self.assertNotRegex(self.release_jobs[nexus], r'(?m)^    if:.*(?:always|failure)\(')
+        self.assertNotRegex(self.release_jobs[github], r'(?m)^    if:.*(?:always|failure)\(')
 
-    def test_event_ref_version_and_credentials_cartesian_gate(self):
-        github_guard = condition(self.github_job)
-        nexus_guard = condition(self.nexus_job)
-        matrix = (
-            ('push', 'refs/heads/main', True, False),
-            ('pull_request', 'refs/pull/42/merge', True, False),
-            ('workflow_dispatch', 'refs/heads/main', True, False),
-            ('workflow_dispatch', 'refs/tags/v0.1.0', True, False),
-            ('push', 'refs/tags/v0.1.0', True, True),
-            ('push', 'refs/tags/v1.0.0', False, False),
-            ('push', 'refs/tags/not-a-version', True, False),
-        )
-        self.assertEqual(re.search(r'(?m)^    needs: (.+)$', self.github_job).group(1), 'check-and-package')
-        self.assertEqual(re.search(r'(?m)^    needs: (.+)$', self.nexus_job).group(1), 'publish-github-release')
-        self.assertIn('name: Validate release tag', self.source)
-        readiness = inline_run_block(
-            self.source, 'Determine optional publisher readiness', 'if [[ -n "$NEXUS_API_KEY" && -n "$NEXUS_FILE_ID" && -n "$NEXUS_MOD_ID" ]]; then',
-            closing_marker=None,
-        )
-        validation = inline_run_block(self.source, 'Validate release tag', 'import os, sys')
+    def test_nexus_readiness_and_attempt_marker(self):
+        github = next(v for v in self.release_jobs.values() if 'publisher-readiness' in v)
+        nexus = next(v for v in self.release_jobs.values() if 'Nexus-Mods/upload-action@' in v)
+        self.assertIn('nexus_ready: ${{ steps.publisher-readiness.outputs.ready }}', github)
+        self.assertNotIn('NEXUS_API_KEY', section(github, 'outputs', 4))
+        for variable in ('NEXUS_API_KEY', 'NEXUS_FILE_ID', 'NEXUS_MOD_ID'):
+            self.assertIn(f'-n "${variable}"', github)
+        self.assertIn("echo 'ready=true'", github)
+        self.assertIn("echo 'ready=false'", github)
+        self.assertLess(nexus.index('name: Check Nexus attempt marker'), nexus.index('name: Record Nexus attempt marker'))
+        self.assertLess(nexus.index('name: Record Nexus attempt marker'), nexus.index('uses: Nexus-Mods/upload-action@'))
+        self.assertEqual(nexus.count('uses: Nexus-Mods/upload-action@'), 1)
+        self.assertIn('98532f7670c27cbecc78fae03fa3e278147827e2', nexus)
+        self.assertIn('tools/verify-github-release.sh', github)
+
+    def test_event_ref_and_dependency_gates(self):
+        github = self.release_jobs['publish-github-release']
+        nexus = self.release_jobs['publish-nexus']
+        def evaluate(job, event, ref, ready, succeeded):
+            expression = re.search(r'(?m)^    if: (.+)$', job).group(1)
+            atoms = expression.split(' && ')
+            result = succeeded
+            for atom in atoms:
+                if atom == "github.event_name == 'push'":
+                    value = event == 'push'
+                elif atom == "startsWith(github.ref, 'refs/tags/v')":
+                    value = ref.startswith('refs/tags/v')
+                elif atom == "needs.publish-github-release.outputs.nexus_ready == 'true'":
+                    value = ready
+                else:
+                    self.fail(f'Unknown guard atom: {atom}')
+                result = result and value
+            return result
+        for event, ref, eligible in [('push', 'refs/heads/main', False),
+                                     ('pull_request', 'refs/pull/42/merge', False),
+                                     ('workflow_dispatch', 'refs/tags/v0.1.0', False),
+                                     ('push', 'refs/tags/not-a-version', False),
+                                     ('push', 'refs/tags/v0.1.0', True)]:
+            for ready in (False, True):
+                for success in (False, True):
+                    with self.subTest(event=event, ref=ref, ready=ready, success=success):
+                        self.assertEqual(evaluate(github, event, ref, ready, success), eligible and success)
+                        self.assertEqual(evaluate(nexus, event, ref, ready, success), eligible and success and ready)
+        self.assertRegex(section(self.release, 'concurrency'), r'(?m)^  cancel-in-progress: false\s*$')
+
+    def test_credential_combinations(self):
+        script = inline_script(self.release, 'Determine optional publisher readiness',
+                               'if [[ -n "$NEXUS_API_KEY" && -n "$NEXUS_FILE_ID" && -n "$NEXUS_MOD_ID" ]]; then', None)
         with tempfile.TemporaryDirectory() as tmp:
-            version_results = {}
-            for tag in ('v0.1.0', 'v1.0.0'):
-                version_results[tag] = subprocess.run(
-                        [os.environ.get('PYTHON', 'python3'), '-c', validation],
-                        cwd=ROOT, env=os.environ | {'RELEASE_TAG': tag},
-                        text=True, capture_output=True, check=False,
-                    )
-            self.assertEqual(version_results['v0.1.0'].returncode, 0)
-            self.assertNotEqual(version_results['v1.0.0'].returncode, 0)
-            self.assertIn('expects v0.1.0; pushed tag is v1.0.0', version_results['v1.0.0'].stdout)
-            for event, ref, check_result, expected in matrix:
-                if ref.startswith('refs/tags/v'):
-                    tag = ref.rsplit('/', 1)[1]
-                    check_result = version_results[tag].returncode == 0
-                for mask in range(8):
-                    out_name = f'{event}-{ref.replace("/", "_")}-{mask}.out'
-                    ready = credentials_ready(readiness, mask, Path(tmp) / out_name)
-                    with self.subTest(event=event, ref=ref, mask=f'{mask:03b}', job='github'):
-                        allowed = evaluate_github_condition(
-                            github_guard, event, ref, nexus_ready=ready,
-                            needs_succeeded=check_result,
-                        )
-                        self.assertEqual(allowed, expected and check_result)
-                    with self.subTest(event=event, ref=ref, mask=f'{mask:03b}', job='nexus'):
-                        allowed = evaluate_github_condition(
-                            nexus_guard, event, ref, nexus_ready=ready,
-                            needs_succeeded=expected and check_result,
-                        )
-                        self.assertEqual(allowed, expected and check_result and ready)
+            for mask in range(8):
+                output = Path(tmp) / str(mask)
+                values = {name: 'value' if mask & (1 << bit) else '' for bit, name in
+                          enumerate(('NEXUS_API_KEY', 'NEXUS_FILE_ID', 'NEXUS_MOD_ID'))}
+                result = subprocess.run(['bash', '-euo', 'pipefail', '-c', script],
+                                        env=os.environ | values | {'GITHUB_OUTPUT': str(output)},
+                                        capture_output=True, text=True)
+                with self.subTest(mask=mask):
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    self.assertEqual(output.read_text(), 'ready=true\n' if mask == 7 else 'ready=false\n')
 
-    def test_package_artifact_selection_uses_only_exact_safe_versions(self):
-        script = inline_run_block(
-            self.source, 'Select package artifacts', 'import json', closing_marker='PY',
-        )
+    def test_tag_matches_package_version(self):
+        step = self.validate.split('      - name: Validate release tag', 1)[1].split('      - name:', 1)[0]
+        self.assertIn("if: startsWith(github.ref, 'refs/tags/v')", step)
+        self.assertIn('RELEASE_TAG: ${{ github.ref_name }}', step)
+        self.assertIn('validate', needs(self.release_jobs['publish-github-release']))
+        self.assertNotRegex(self.release_jobs['publish-github-release'], r'(?m)^    if:.*(?:always|failure)\(')
+        script = inline_script(self.validate, 'Validate release tag', 'import os, sys', "'")
+        from tools.package import VERSION
+        for tag, success in [('v' + VERSION, True), ('v' + VERSION + '-wrong', False)]:
+            result = subprocess.run(['python3', '-c', script], cwd=ROOT,
+                                    env=os.environ | {'RELEASE_TAG': tag}, capture_output=True, text=True)
+            with self.subTest(tag=tag):
+                self.assertEqual(result.returncode == 0, success, result.stdout + result.stderr)
+
+    def test_mod_artifact_selection_rejects_unsafe_inputs(self):
+        script = inline_script(self.validate, 'Select package artifacts', 'import os', 'PY')
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            active = root / 'types/active.json'
-            active.parent.mkdir(parents=True)
-            tools = root / 'tools'
-            tools.mkdir()
-            package_source = tools / 'package.py'
-            package_source.write_text("VERSION = '0.1.0'\n")
-            artifacts = root / 'build/types'
-            artifacts.mkdir(parents=True)
-            active.write_text('{"schema": 2, "version": "13540"}\n')
-            mod_artifacts = root / 'build'
-            (mod_artifacts / 'BestiaryLens-0.1.0.zip').write_bytes(b'zip')
-            (mod_artifacts / 'BestiaryLens-0.1.0.zip.sha256').write_text('checksum')
-            (mod_artifacts / 'BestiaryLens-0.0.9.zip').write_bytes(b'stale zip')
-            (mod_artifacts / 'BestiaryLens-0.0.9.zip.sha256').write_text('stale checksum')
-            for version in ('13540', '13539'):
-                (artifacts / f'QueensDomain-types-{version}.zip').write_bytes(b'zip')
-                (artifacts / f'QueensDomain-types-{version}.zip.sha256').write_text('checksum')
-            output = root / 'github-output'
-            result = subprocess.run(
-                [os.environ.get('PYTHON', 'python3'), '-c', script], cwd=root,
-                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
-                capture_output=True, check=False,
-            )
+            (root / 'tools').mkdir()
+            package = root / 'tools/package.py'
+            build = root / 'build'
+            build.mkdir()
+            archive = build / 'BestiaryLens-0.1.0.zip'
+            checksum = build / 'BestiaryLens-0.1.0.zip.sha256'
+            archive.write_bytes(b'zip')
+            checksum.write_text('checksum')
+            (build / 'BestiaryLens-0.0.9.zip').write_bytes(b'stale')
+            output = root / 'output'
+
+            def run(version):
+                package.write_text(f'VERSION = {version!r}\n')
+                output.write_text('')
+                return subprocess.run(['python3', '-B', '-c', script], cwd=root,
+                                      env=os.environ | {'GITHUB_OUTPUT': str(output)}, capture_output=True, text=True)
+
+            result = run('0.1.0')
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(output.read_text(), 'mod_version=0.1.0\nsdk_version=13540\n')
-
-            package_source.write_text("VERSION = '../escape'\n")
-            output.write_text('')
-            result = subprocess.run(
-                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
-                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
-                capture_output=True, check=False,
-            )
-            self.assertNotEqual(result.returncode, 0)
+            self.assertEqual(output.read_text(), 'mod_version=0.1.0\n')
+            for version in ('../escape', '', 'bad/version'):
+                with self.subTest(version=version):
+                    self.assertNotEqual(run(version).returncode, 0)
+                    self.assertEqual(output.read_text(), '')
+            checksum.unlink()
+            self.assertNotEqual(run('0.1.0').returncode, 0)
+            self.assertEqual(output.read_text(), '')
+            outside = root / 'outside'
+            outside.write_text('checksum')
+            checksum.symlink_to(outside)
+            self.assertNotEqual(run('0.1.0').returncode, 0)
+            self.assertEqual(output.read_text(), '')
+            checksum.unlink()
+            archive.unlink()
+            # A symlinked build directory must not redirect artifact selection.
+            shutil.rmtree(build)
+            outside_dir = root / 'outside-build'
+            outside_dir.mkdir()
+            (outside_dir / archive.name).write_bytes(b'zip')
+            (outside_dir / checksum.name).write_text('checksum')
+            build.symlink_to(outside_dir, target_is_directory=True)
+            self.assertNotEqual(run('0.1.0').returncode, 0)
             self.assertEqual(output.read_text(), '')
 
-            package_source.write_text("VERSION = '0.1.0'\n")
-            active.write_text('{"schema": 2, "version": "../outside"}\n')
-            output.write_text('')
-            result = subprocess.run(
-                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
-                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
-                capture_output=True, check=False,
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual(output.read_text(), '')
+    def test_mod_artifact_is_wired_to_publishers(self):
+        uploads = [(job, artifact_names(job, 'actions/upload-artifact')) for job in self.validate_jobs.values()]
+        mod_names = [name for _, names in uploads for name in names if name.startswith('mod-')]
+        self.assertEqual(len(mod_names), 1)
+        producer = next(job for job, names in uploads if mod_names[0] in names)
+        self.assertIn('BestiaryLens-', producer)
+        self.assertIn('.zip.sha256', producer)
+        self.assertIn('if-no-files-found: error', producer)
+        for job in self.release_jobs.values():
+            if re.search(r'(?i)gh release (?:create|edit|upload)', job) or 'Nexus-Mods/upload-action@' in job:
+                with self.subTest(job=job.splitlines()[0]):
+                    self.assertIn(mod_names[0], artifact_names(job, 'actions/download-artifact'))
 
-            active.write_text('{"schema": 2, "version": "13540"}\n')
-            (artifacts / 'QueensDomain-types-13540.zip.sha256').unlink()
-            result = subprocess.run(
-                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
-                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
-                capture_output=True, check=False,
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual(output.read_text(), '')
-
-            active.unlink()
-            outside_pointer = root / 'outside-pointer.json'
-            outside_pointer.write_text('{"schema": 2, "version": "13540"}\n')
-            active.symlink_to(outside_pointer)
-            result = subprocess.run(
-                [os.environ.get('PYTHON', 'python3'), '-B', '-c', script], cwd=root,
-                env=os.environ | {'GITHUB_OUTPUT': str(output)}, text=True,
-                capture_output=True, check=False,
-            )
-            self.assertNotEqual(result.returncode, 0)
-            self.assertEqual(output.read_text(), '')
-
-        self.assertIn('build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip', self.source)
-        self.assertIn('build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip.sha256', self.source)
-        self.assertIn('build/types/QueensDomain-types-${{ steps.package-artifacts.outputs.sdk_version }}.zip', self.source)
-        self.assertIn('build/types/QueensDomain-types-${{ steps.package-artifacts.outputs.sdk_version }}.zip.sha256', self.source)
+    def test_shared_validation_does_not_package_sdk_or_publish(self):
+        for name, source in [('ci', self.ci), ('release', self.release), ('validate', self.validate)]:
+            with self.subTest(workflow=name):
+                self.assertNotRegex(source, r'(?i)QueensDomain-types-[^\s]*\.zip|types-package|sdk_version|sdk-\$\{\{')
+        self.assertNotRegex(self.validate, r'(?i)gh release|Nexus-Mods/upload-action')
+        self.assertIn('tools/test-git-cliff.sh', self.validate)
+        self.assertIn('tools/release-notes.sh', self.validate)
+        notes = [name for job in self.validate_jobs.values()
+                 for name in artifact_names(job, 'actions/upload-artifact')
+                 if name.startswith('release-notes-')]
+        self.assertEqual(len(notes), 1)
+        for job in self.release_jobs.values():
+            if re.search(r'(?i)gh release (?:create|edit|upload)', job) or 'Nexus-Mods/upload-action@' in job:
+                self.assertIn(notes[0], artifact_names(job, 'actions/download-artifact'))
+        for command in ('format-check', 'types-verify', 'workflow-lint', 'lint', 'test', 'package'):
+            with self.subTest(command=command):
+                self.assertRegex(self.validate, r'(?<![\w-])' + re.escape(command) + r'(?![\w-])')
 
 
 if __name__ == '__main__':

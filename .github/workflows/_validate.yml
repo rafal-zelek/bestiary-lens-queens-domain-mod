@@ -1,0 +1,152 @@
+name: Validate and package
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+env:
+  CI_IMAGE: bestiary-lens-ci
+
+jobs:
+  validate:
+    name: Lint, test and package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Build pinned toolchain
+        run: docker build --tag "$CI_IMAGE" .
+
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          docker run --rm --network none --env RELEASE_TAG --entrypoint python3 "$CI_IMAGE" -c '
+          import os, sys
+          from tools.package import VERSION
+          expected, actual = "v" + VERSION, os.environ["RELEASE_TAG"]
+          print(f"Package version expects {expected}; pushed tag is {actual}")
+          sys.exit(0 if actual == expected else 1)
+          '
+
+      - name: Check Lua formatting
+        run: docker run --rm --network none "$CI_IMAGE" format-check
+
+      - name: Verify active SDK integrity
+        run: docker run --rm --network none "$CI_IMAGE" types-verify
+
+      - name: Lint GitHub workflows
+        run: docker run --rm --network none "$CI_IMAGE" workflow-lint
+
+      - name: Run LuaLS diagnostics
+        run: |
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
+            "$CI_IMAGE" lint
+
+      - name: Run Python and Lua tests
+        run: docker run --rm --network none "$CI_IMAGE" test
+
+      - name: Test release notes generation
+        run: |
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
+            --entrypoint bash "$CI_IMAGE" tools/test-git-cliff.sh
+
+      - name: Build mod package
+        run: |
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
+            "$CI_IMAGE" package
+
+      - name: Generate release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
+            --entrypoint bash "$CI_IMAGE" tools/release-notes.sh "$RELEASE_TAG"
+
+      - name: Select package artifacts
+        id: package-artifacts
+        run: |
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          import re
+          from tools.package import VERSION
+
+          safe_version = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,79}')
+          if not isinstance(VERSION, str) or not safe_version.fullmatch(VERSION):
+              raise SystemExit('Mod package version is invalid')
+
+          build = Path('build')
+          if build.is_symlink() or not build.is_dir():
+              raise SystemExit('Build directory is missing or unsafe')
+          mod_package = build / f'BestiaryLens-{VERSION}.zip'
+          mod_checksum = build / f'BestiaryLens-{VERSION}.zip.sha256'
+          if any(path.is_symlink() or not path.is_file() for path in (mod_package, mod_checksum)):
+              raise SystemExit(f'Mod package or checksum is missing or unsafe: {VERSION}')
+
+          with Path(os.environ['GITHUB_OUTPUT']).open('a', encoding='utf-8') as output:
+              output.write(f'mod_version={VERSION}\n')
+          PY
+
+      - name: Upload mod package
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mod-${{ github.sha }}
+          path: |
+            build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip
+            build/BestiaryLens-${{ steps.package-artifacts.outputs.mod_version }}.zip.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+          overwrite: true
+
+      - name: Upload release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes-${{ github.sha }}
+          path: build/release-notes.md
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
+      - name: Upload LuaLS logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: luals-${{ github.sha }}
+          path: build/luals/*.log
+          if-no-files-found: ignore
+          retention-days: 7
+          overwrite: true
+
+      - name: Summarize validation
+        if: always()
+        env:
+          JOB_STATUS: ${{ job.status }}
+          MOD_VERSION: ${{ steps.package-artifacts.outputs.mod_version }}
+          REF: ${{ github.ref }}
+          SHA: ${{ github.sha }}
+        run: |
+          echo "### Validation and mod packaging: $JOB_STATUS" >> "$GITHUB_STEP_SUMMARY"
+          if [[ -n "$MOD_VERSION" ]]; then
+            echo "- Mod version: $MOD_VERSION" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "- Mod artifact (if uploaded): mod-$SHA" >> "$GITHUB_STEP_SUMMARY"
+          echo "- LuaLS logs (if available): luals-$SHA" >> "$GITHUB_STEP_SUMMARY"
+          if [[ "$REF" == refs/tags/v* ]]; then
+            echo "- Release notes (if uploaded): release-notes-$SHA" >> "$GITHUB_STEP_SUMMARY"
+          fi

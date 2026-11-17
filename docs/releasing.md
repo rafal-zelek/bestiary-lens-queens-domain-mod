@@ -2,22 +2,23 @@
 
 ## GitHub Actions and releases
 
-`.github/workflows/ci.yml` runs on pull requests, pushes to `main`, tags starting with `v`,
-and manual **Run workflow**. It builds the Docker image, validates formatting and SDK integrity,
-lints workflows and Lua, runs tests, then builds the mod and active SDK packages.
+`.github/workflows/ci.yml` runs on pull requests, pushes to `main`, and manual **Run workflow**.
+`.github/workflows/release.yml` runs on pushes of tags starting with `v`. Both use the shared
+validation workflow: it builds the Docker image, validates formatting and SDK integrity,
+lints workflows and Lua, runs tests, then builds the mod package. A manual CI run against a tag
+validates it but never publishes a release.
 All project tooling, including actionlint, git-cliff and SSH, is in the Dockerfile.
 GitHub actions are pinned to commit SHAs. CI uses `contents: read`; tag publication jobs receive
 `contents: write` only where needed to create a GitHub Release or add the Nexus attempt marker.
 The workflow does not push a commit/tag or connect to the Steam Deck.
 
-Successful runs expose two downloadable artifacts:
+Successful runs expose a downloadable package artifact:
 
 - `mod-<commit-sha>`: the installable mod ZIP and its SHA-256 sidecar.
-- `sdk-<commit-sha>`: the active game-versioned types ZIP and its SHA-256 sidecar.
 
-Packages are kept for 30 days; available LuaLS logs are uploaded even on failure and kept for 7 days.
-For a checked version tag, CI also creates a GitHub Release with the mod ZIP, its SHA-256 sidecar,
-and generated or curated release notes. The separate SDK package remains a CI artifact.
+The package is kept for 30 days; available LuaLS logs are uploaded even on failure and kept for 7 days.
+After a version-tag push passes validation, the release workflow creates a GitHub Release with the
+mod ZIP, its SHA-256 sidecar, and generated or curated release notes. The SDK remains tracked source data.
 
 ### Release procedure
 
@@ -38,15 +39,15 @@ and generated or curated release notes. The separate SDK package remains a CI ar
    a mismatch fails before package publication. The current `VERSION` is `0.1.0`, so `v1.0.0`
    will fail until the version is deliberately updated in all locations in step 1.
    Existing tags should remain immutable.
-4. Push the tag and wait for its CI run. The workflow checks out the tag with full history,
+4. Push the tag and wait for its Release workflow run. The workflow checks out the tag with full history,
    packages that checkout, and generates notes for that same tag/commit. `.github/release-notes/<tag>.md`
    overrides generated notes when present. There are currently no version tags in the repository;
    the first release therefore needs a matching curated notes file or a prior semantic version baseline
    tag, otherwise note generation fails closed. The `tools/test-git-cliff.sh` offline fixture also runs in CI.
-5. After CI succeeds, the workflow creates a published GitHub Release with the installable mod ZIP,
+5. After validation succeeds, the workflow creates a published GitHub Release with the installable mod ZIP,
    matching `.zip.sha256` file and the notes as the release body. It verifies the checksum and release
-   assets. The SDK package remains available in the CI artifact if needed; it is not attached to the
-   GitHub Release. Source code ZIP/TAR assets are repository archives, not the installable mod package.
+   assets. The SDK is tracked in the repository, not published as a separate package.
+   Source code ZIP/TAR assets are repository archives, not the installable mod package.
 
 ### Nexus Mods publication
 
