@@ -7,7 +7,7 @@ import zipfile
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 def module(name):
-    spec = importlib.util.spec_from_file_location(name, ROOT / (name + '.py'))
+    spec = importlib.util.spec_from_file_location(name, ROOT / 'tools' / (name + '.py'))
     obj = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(obj)
     return obj
@@ -15,6 +15,7 @@ def module(name):
 class DistributionTests(unittest.TestCase):
     def test_package_excludes_unlisted_files(self):
         release = module('package')
+        self.assertTrue(all(path.rsplit('.', 1)[-1] != 'py' for path in release.PAYLOAD))
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)
             for name in release.PAYLOAD:
@@ -26,6 +27,7 @@ class DistributionTests(unittest.TestCase):
             archive = release.build(root)
             with zipfile.ZipFile(archive) as z:
                 self.assertEqual(set(z.namelist()), set(release.PAYLOAD))
+                self.assertFalse(any(name.endswith('.py') for name in z.namelist()))
 
     def test_deploy_preserves_other_mods_and_backs_up_previous_version(self):
         deploy = module('deploy')

@@ -8,7 +8,7 @@ VERSION = '0.1.0'
 MOD_FILES = ('enabled.txt', 'Scripts/main.lua', 'Scripts/config.lua',
              'Scripts/card_model.lua', 'Scripts/card_view.lua')
 PAYLOAD = tuple('Mods/BestiaryLens/' + name for name in MOD_FILES) + (
-    'README.md', 'LICENSE', 'deploy.py', 'package.py')
+    'README.md', 'LICENSE')
 
 def build(root):
     root = Path(root)
@@ -28,4 +28,4 @@ def build(root):
     return target
 
 if __name__ == '__main__':
-    print(build(Path(__file__).resolve().parent))
+    print(build(Path(__file__).resolve().parents[1]))

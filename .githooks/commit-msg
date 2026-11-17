@@ -1,0 +1,22 @@
+#!/bin/sh
+# Enforce the commit convention: Conventional subject + one Assisted-by: AI trailer.
+msg="$1"
+subject=$(sed -n '1p' "$msg")
+
+if ! printf '%s\n' "$subject" | grep -Eq '^(feat|fix|perf|refactor|docs|test|ci|chore|build)(\([a-z0-9._/-]+\))?: .+'; then
+    echo "commit rejected: subject must be 'type(scope): description'" >&2
+    exit 1
+fi
+if [ "${#subject}" -gt 72 ]; then
+    echo "commit rejected: subject must be under 72 characters" >&2
+    exit 1
+fi
+if [ "$(grep -Ec '^Assisted-by: AI$' "$msg")" -ne 1 ] ||
+   [ "$(grep -Eic '^Assisted-by:' "$msg")" -ne 1 ]; then
+    echo "commit rejected: exactly one 'Assisted-by: AI' trailer is required" >&2
+    exit 1
+fi
+if grep -Eiq 'generated with|co-authored-by|(^|[^a-z])(crush|codex|openai|chatgpt|claude|copilot|gemini|tencent|hy4)([^a-z]|$)' "$msg"; then
+    echo "commit rejected: vendor or tool attribution is not allowed" >&2
+    exit 1
+fi

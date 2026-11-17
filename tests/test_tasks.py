@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def load_tasks():
-    spec = importlib.util.spec_from_file_location('bestiary_tasks', ROOT / 'tasks.py')
+    spec = importlib.util.spec_from_file_location('bestiary_tasks', ROOT / 'tools' / 'tasks.py')
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -30,7 +30,8 @@ class TaskTests(unittest.TestCase):
             self.assertIn('--check', commands[0])
             self.assertEqual(Path(commands[1][-2]).name, 'sync_types.py')
             self.assertEqual(commands[1][-1], 'verify')
-            self.assertEqual(commands[2][0], 'actionlint')
+            self.assertEqual(commands[2], ['actionlint', *(str(Path(tmp) / '.github/workflows' / name)
+                                                          for name in ('ci.yml', 'release.yml', '_validate.yml'))])
             self.assertEqual(commands[3][0], 'lua-language-server')
             self.assertIn('--checklevel=Warning', commands[3])
             self.assertIn('--metapath=' + str(Path(tmp) / 'build/luals/meta'), commands[3])
@@ -58,6 +59,13 @@ class TaskTests(unittest.TestCase):
         command = run.call_args.args[0]
         self.assertIn('--verify', command)
         self.assertNotIn('--check', command)
+
+    def test_removed_types_package_task_is_rejected(self):
+        with patch.object(self.tasks.subprocess, 'run') as run, contextlib.redirect_stderr(io.StringIO()):
+            with self.assertRaises(SystemExit) as error:
+                self.tasks.main(['types-package'])
+        self.assertEqual(error.exception.code, 2)
+        run.assert_not_called()
 
     def test_invalid_task_never_starts_a_process(self):
         with patch.object(self.tasks.subprocess, 'run') as run, contextlib.redirect_stderr(io.StringIO()):
