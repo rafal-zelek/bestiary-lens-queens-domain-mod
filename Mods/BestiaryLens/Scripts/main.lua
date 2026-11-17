@@ -1,5 +1,6 @@
 -- BestiaryLens: contextual bestiary card. All UE access stays on game thread.
 local TAG = '[BestiaryLens] '
+local RUNTIME_MARKER = 'F8-ONSCR-20261117-06'
 local Config = require('config')
 local Model = require('card_model')
 local CardView = require('card_view')
@@ -28,6 +29,31 @@ local function valid(o)
 end
 local function log(s)
     print(TAG .. tostring(s) .. '\n')
+end
+local function debugScreen(message, context)
+    log(RUNTIME_MARKER .. ' ' .. message)
+    if not context then
+        return
+    end
+    local ok, err = pcall(function()
+        local helpers = StaticFindObject('/Script/FB_Utils.Default__FB_BPHelpers') --[[@as UFB_BPHelpers]]
+        if helpers and helpers:IsValid() then
+            helpers:FB_PrintString(
+                context,
+                RUNTIME_MARKER .. ' ' .. message,
+                true,
+                true,
+                true,
+                { R = 1, G = 0.75, B = 0.1, A = 1 },
+                8
+            )
+        else
+            error('FB_BPHelpers default object unavailable')
+        end
+    end)
+    if not ok then
+        log('screen message failed: ' .. tostring(err))
+    end
 end
 local function attempt(fn, fallback)
     local ok, v = pcall(fn)
@@ -829,4 +855,179 @@ RegisterKeyBind(Key.F9, function()
         shown = not shown
     end)
 end)
-log('BestiaryLens 0.1.0 loaded; waiting for gameplay HUD')
+RegisterKeyBind(Key.F8, function()
+    ExecuteInGameThread(function()
+        log(RUNTIME_MARKER .. ' F8 handler active')
+        local ok, err = pcall(function()
+            local cheats = FindAllOf('FS_Cheats_C') or {}
+            local players = FindAllOf('FS_PlayerChar_C') or {}
+            if #cheats == 0 or #players == 0 then
+                log('F8 two-mob test: missing cheats or player')
+                return
+            end
+            local player = players[1]
+            debugScreen('F8 active; preparing +Y skeleton', player)
+            local controller = player:GetController()
+            if not valid(controller) then
+                log('F8 two-mob test: player controller is invalid')
+                return
+            end
+            local firstData = StaticFindObject(
+                '/Game/Enemies/Boner_00/Skeletons24/Standard/Boner_Standard_Fighter_Data.Boner_Standard_Fighter_Data'
+            )
+            local secondData =
+                StaticFindObject('/Game/Enemies/Fisher_00/Fisher24/Fisher_01/Fisher_01_Data.Fisher_01_Data')
+            if not valid(firstData) or not valid(secondData) then
+                log('F8 two-mob test: could not find both enemy data assets')
+                return
+            end
+            local playerLocation = player:K2_GetActorLocation()
+            local function spawnLocation(yDirection)
+                return {
+                    X = playerLocation.X,
+                    Y = playerLocation.Y + yDirection * 300,
+                    Z = playerLocation.Z,
+                }
+            end
+            local function snapshotActors()
+                local seen = {}
+                for _, enemy in ipairs(FindAllOf('EnemyBase_C') or {}) do
+                    if valid(enemy) then
+                        seen[enemy:GetAddress()] = true
+                    end
+                end
+                return seen
+            end
+            local spawnedAddresses = snapshotActors()
+            local function placeSpawnedEnemy(expectedData, location)
+                local chosen
+                for _, enemy in ipairs(FindAllOf('EnemyBase_C') or {}) do
+                    if
+                        valid(enemy)
+                        and valid(enemy.Data)
+                        and enemy.Data:GetAddress() == expectedData:GetAddress()
+                        and not spawnedAddresses[enemy:GetAddress()]
+                    then
+                        local fullName = enemy:GetFullName()
+                        if fullName:find('PersistentLevel') then
+                            chosen = enemy
+                            break
+                        end
+                        chosen = chosen or enemy
+                    end
+                end
+                if not valid(chosen) then
+                    log('spawn placement failed: actor not found for ' .. expectedData:GetFullName())
+                    return
+                end
+                chosen:K2_SetActorLocation(location, false, {}, true)
+                spawnedAddresses[chosen:GetAddress()] = true
+                log('spawn placement actor=' .. chosen:GetFullName())
+                return chosen
+            end
+            local function aimAtEnemy(enemy)
+                if not valid(enemy) or not valid(controller.PlayerCameraManager) then
+                    log('aim setup failed: enemy or camera invalid')
+                    return false
+                end
+                local camera = controller.PlayerCameraManager:GetCameraLocation()
+                local target = enemy:K2_GetActorLocation()
+                if valid(enemy.Mesh) then
+                    local ok, center = pcall(function()
+                        local c, extent, radius = {}, {}, {}
+                        local ksl = StaticFindObject('/Script/Engine.Default__KismetSystemLibrary') --[[@as UKismetSystemLibrary]]
+                        ---@diagnostic disable-next-line: param-type-mismatch
+                        ksl:GetComponentBounds(enemy.Mesh, c, extent, radius)
+                        return c
+                    end)
+                    if ok and center.X then
+                        target = center
+                    end
+                end
+                local dx, dy, dz = target.X - camera.X, target.Y - camera.Y, target.Z - camera.Z
+                local rotation = controller:GetControlRotation()
+                rotation.Yaw = math.deg(math.atan(dy, dx))
+                rotation.Pitch = math.deg(math.atan(dz, math.sqrt(dx * dx + dy * dy)))
+                controller:SetControlRotation(rotation)
+                log('aim set actor=' .. enemy:GetFullName() .. ' yaw=' .. tostring(rotation.Yaw))
+                return true
+            end
+            local function waitForHover(stage, enemy, done, attempts)
+                attempts = attempts or 0
+                if not valid(enemy) then
+                    log(stage .. ' hover=FAIL spawned actor invalid')
+                    done()
+                    return
+                end
+                if valid(currentTarget) and currentTarget:GetAddress() == enemy:GetAddress() then
+                    debugScreen(stage .. ' hover=PASS', player)
+                    ExecuteInGameThreadWithDelay(3000, done)
+                    return
+                end
+                if attempts >= 25 then
+                    debugScreen(
+                        stage
+                            .. ' hover=FAIL target='
+                            .. tostring(currentTarget and currentTarget:GetFullName() or 'none'),
+                        player
+                    )
+                    done()
+                    return
+                end
+                ExecuteInGameThreadWithDelay(200, function()
+                    waitForHover(stage, enemy, done, attempts + 1)
+                end)
+            end
+            local function report(stage, expectedData)
+                local found = false
+                for _, enemy in ipairs(FindAllOf('EnemyBase_C') or {}) do
+                    if valid(enemy) and valid(enemy.Data) and enemy.Data:GetAddress() == expectedData:GetAddress() then
+                        found = true
+                        log(stage .. ' spawned actor=' .. enemy:GetFullName() .. ' data=' .. enemy.Data:GetFullName())
+                    end
+                end
+                if not found then
+                    log(stage .. ' spawned actor not found in EnemyBase_C scan')
+                end
+                log(stage .. ' aim/card target=' .. tostring(currentTarget and currentTarget:GetFullName() or 'none'))
+            end
+            debugScreen('spawning skeleton at Y+300; facing +Y', player)
+            local firstLocation = spawnLocation(1)
+            cheats[1]:SpawnEnemyFromData(firstData, true, false)
+            ExecuteInGameThreadWithDelay(500, function()
+                local firstActor = placeSpawnedEnemy(firstData, firstLocation)
+                if not aimAtEnemy(firstActor) then
+                    return
+                end
+                ExecuteInGameThreadWithDelay(300, function()
+                    report('stage 1', firstData)
+                    waitForHover('stage 1', firstActor, function()
+                        local secondRotation = controller:GetControlRotation()
+                        secondRotation.Yaw = secondRotation.Yaw + 180
+                        controller:SetControlRotation(secondRotation)
+                        debugScreen('spawning Fisher at Y-300', player)
+                        local secondLocation = spawnLocation(-1)
+                        spawnedAddresses = snapshotActors()
+                        cheats[1]:SpawnEnemyFromData(secondData, true, false)
+                        ExecuteInGameThreadWithDelay(500, function()
+                            local secondActor = placeSpawnedEnemy(secondData, secondLocation)
+                            if not aimAtEnemy(secondActor) then
+                                return
+                            end
+                            ExecuteInGameThreadWithDelay(300, function()
+                                report('stage 2', secondData)
+                                waitForHover('stage 2', secondActor, function()
+                                    log('F8 two-mob test complete')
+                                end)
+                            end)
+                        end)
+                    end)
+                end)
+            end)
+        end)
+        if not ok then
+            log('F8 two-mob test failed: ' .. tostring(err))
+        end
+    end)
+end)
+log('BestiaryLens 0.1.0 loaded; runtime=' .. RUNTIME_MARKER .. '; waiting for gameplay HUD')
