@@ -18,6 +18,8 @@
 !types/**
 !README.md
 !LICENSE
+!docs/
+!docs/nexus-description.bbcode
 !Mods/
 !Mods/BestiaryLens/
 !Mods/BestiaryLens/enabled.txt

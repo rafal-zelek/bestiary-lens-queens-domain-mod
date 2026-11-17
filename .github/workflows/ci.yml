@@ -26,6 +26,7 @@ jobs:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Build pinned toolchain
@@ -62,6 +63,12 @@ jobs:
       - name: Run Python and Lua tests
         run: docker run --rm --network none "$CI_IMAGE" test
 
+      - name: Test release notes generation
+        run: |
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
+            --entrypoint bash "$CI_IMAGE" tools/test-git-cliff.sh
+
       - name: Build mod and SDK packages
         run: |
           for task in package types-package; do
@@ -69,6 +76,15 @@ jobs:
               --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
               "$CI_IMAGE" "$task"
           done
+
+      - name: Generate release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          docker run --rm --network none --user "$(id -u):$(id -g)" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/workspace" \
+            --entrypoint bash "$CI_IMAGE" tools/release-notes.sh "$RELEASE_TAG"
 
       - name: Upload mod package
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -94,6 +110,16 @@ jobs:
           retention-days: 30
           overwrite: true
 
+      - name: Upload release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes-${{ github.sha }}
+          path: build/release-notes.md
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 30
+
       - name: Upload LuaLS logs
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -103,3 +129,168 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
           overwrite: true
+
+  publish-github-release:
+    name: Publish GitHub release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: check-and-package
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    outputs:
+      nexus_ready: ${{ steps.publisher-readiness.outputs.ready }}
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Determine optional publisher readiness
+        id: publisher-readiness
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          NEXUS_FILE_ID: ${{ vars.NEXUSMODS_FILE_ID }}
+          NEXUS_MOD_ID: ${{ vars.NEXUSMODS_MOD_ID }}
+        run: |
+          if [[ -n "$NEXUS_API_KEY" && -n "$NEXUS_FILE_ID" && -n "$NEXUS_MOD_ID" ]]; then
+            echo 'ready=true' >> "$GITHUB_OUTPUT"
+            echo 'Optional publisher credentials are complete.'
+          else
+            echo 'ready=false' >> "$GITHUB_OUTPUT"
+            echo 'Optional publisher credentials are incomplete; its job will be skipped.'
+          fi
+
+      - name: Download mod package
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: mod-${{ github.sha }}
+          path: release-assets
+
+      - name: Download release notes
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-notes-${{ github.sha }}
+          path: release-notes
+
+      - name: Verify release asset set and checksum
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          shopt -s nullglob
+          packages=(release-assets/BestiaryLens-*.zip)
+          checksums=(release-assets/BestiaryLens-*.zip.sha256)
+          test "${#packages[@]}" -eq 1
+          test "${#checksums[@]}" -eq 1
+          test -s release-notes/release-notes.md
+          (cd release-assets && sha256sum --check "$(basename "${checksums[0]}")")
+          test "$(basename "${packages[0]}")" = "BestiaryLens-${RELEASE_TAG#v}.zip"
+
+      - name: Create GitHub release if absent
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "GitHub release $RELEASE_TAG already exists; keeping its body and assets unchanged."
+          else
+            gh release create "$RELEASE_TAG" \
+              release-assets/BestiaryLens-*.zip \
+              release-assets/BestiaryLens-*.zip.sha256 \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --title "Bestiary Lens $RELEASE_TAG" \
+              --notes-file release-notes/release-notes.md
+          fi
+
+      - name: Verify GitHub release assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash tools/verify-github-release.sh "$RELEASE_TAG"
+
+  publish-nexus:
+    name: Publish Nexus Mods update
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && needs.publish-github-release.outputs.nexus_ready == 'true'
+    needs: publish-github-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - name: Check out release source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Download mod package
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: mod-${{ github.sha }}
+          path: release-assets
+
+      - name: Download release notes
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: release-notes-${{ github.sha }}
+          path: release-notes
+
+      - name: Prepare Nexus version and changelog
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          version="${RELEASE_TAG#v}"
+          [[ "$version" =~ ^[A-Za-z0-9.-]{1,50}$ ]]
+          python3 - "$version" <<'PY'
+          import os
+          import sys
+          from pathlib import Path
+          version = sys.argv[1]
+          notes = Path('release-notes/release-notes.md').read_text()
+          if not notes.strip():
+              raise SystemExit('Release notes are empty; refusing Nexus publication.')
+          if len(notes) > 65535:
+              raise SystemExit('Release notes exceed the Nexus changelog limit of 65535 characters.')
+          delimiter = 'NEXUS_CHANGELOG_' + os.urandom(16).hex()
+          while delimiter in notes:
+              delimiter = 'NEXUS_CHANGELOG_' + os.urandom(16).hex()
+          with open(os.environ['GITHUB_ENV'], 'a') as env_file:
+              env_file.write(f'NEXUS_VERSION={version}\n')
+              env_file.write(f'NEXUS_FILENAME=BestiaryLens-{version}.zip\n')
+              env_file.write(f'NEXUS_CHANGELOG<<{delimiter}\n{notes}\n{delimiter}\n')
+          PY
+
+      - name: Check Nexus attempt marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash tools/nexus-release-marker.sh check "$RELEASE_TAG"
+
+      - name: Record Nexus attempt marker
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash tools/nexus-release-marker.sh write "$RELEASE_TAG"
+
+      - name: Upload new Nexus file version and changelog
+        uses: Nexus-Mods/upload-action@98532f7670c27cbecc78fae03fa3e278147827e2 # v1.0.0-beta.11
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          NEXUS_FILE_ID: ${{ vars.NEXUSMODS_FILE_ID }}
+          NEXUS_MOD_ID: ${{ vars.NEXUSMODS_MOD_ID }}
+        with:
+          api_key: ${{ env.NEXUS_API_KEY }}
+          file_id: ${{ env.NEXUS_FILE_ID }}
+          filename: release-assets/${{ env.NEXUS_FILENAME }}
+          version: ${{ env.NEXUS_VERSION }}
+          update_mod_version: true
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          changelog: ${{ env.NEXUS_CHANGELOG }}
+
+      - name: Update Nexus page description
+        env:
+          NEXUS_API_KEY: ${{ secrets.NEXUSMODS_API_KEY }}
+          NEXUS_MOD_ID: ${{ vars.NEXUSMODS_MOD_ID }}
+        run: python3 tools/nexus-page-description.py
