@@ -16,7 +16,8 @@ MOD_FILES = (
 SMOKE_FILES = (
     'Scripts/smoke.test.lua', 'Scripts/smoke/config.lua',
     'Scripts/sdk/domain/direction.lua', 'Scripts/sdk/domain/enemies.lua',
-    'Scripts/sdk/domain/position.lua', 'Scripts/sdk/domain/smoke.lua',
+    'Scripts/sdk/domain/position.lua', 'Scripts/sdk/domain/runtime_menu.lua',
+    'Scripts/sdk/domain/smoke.lua',
     'Scripts/sdk/engine/bestiary_runtime.lua', 'Scripts/sdk/engine/debug_hud.lua',
 )
 SMOKE_ENTRY = 'Scripts/smoke/entry.lua'

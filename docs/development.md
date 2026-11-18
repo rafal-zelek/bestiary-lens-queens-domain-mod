@@ -212,3 +212,25 @@ They do not replace an in-game screenshot or a controller test.
 
 All generated files belong in ignored `build/`. Keep machine-specific settings and private notes outside this repository.
 Before publishing, review `git status --short --untracked-files=all` and the archive member list.
+
+### Runtime menu decisions
+
+The development payload includes `sdk.domain.runtime_menu`, a pure decision module for
+preparing a dedicated smoke fixture. It does not launch the game, send input, or run the smoke
+scenario. Declare the desired save by alias and readiness by intent (for example,
+`{ save = 'dedicated-test-save', readiness = 'playable' }`). A future runtime adapter must
+resolve that alias locally to an exact profile/save pair before calling `Menu.decide`.
+
+On Steam Deck, opening **Play** in the title menu (**Graj** in Polish) opened the
+file selector (**Wybór pliku**) without loading a save. The selector displayed occupied and empty
+rows. An empty row could be highlighted, so focus alone cannot identify a loadable fixture.
+The tracked SDK declares `TitleScreenUI.LoadGameButton`, `InSaveMenu`, and
+`SaveSlotWidget.Index`, `Backup`, and `Is Suspend Save`. These are adapter candidates,
+not validated runtime bindings.
+
+The adapter must own the Steam shortcut launch and session, classify the active screen, verify
+focus before an action, and observe a fresh transition before sending another action. It must
+resolve only one regular file in the expected profile, and after loading, independently verify
+the exact active save and playable state. A different active save, unexpected modal, duplicate row
+identity, or unknown slot list stops the run. Awaiting a transition needs a bounded deadline.
+No durable fixture or save identity mechanism has been verified on device yet.
