@@ -1,35 +1,15 @@
 [b]Bestiary Lens[/b]
 
-A contextual bestiary card for Queen's Domain. Aim at an enemy to see its unlocked bestiary information in a compact, native-style card using the game's own localized text, fonts, panels and item icons.
+Aim at an enemy in Queen's Domain to see its unlocked bestiary information on a small card.
 
-[b]Displayed information[/b]
-[list]
-[*]Base HP, attack and XP
-[*]Slash, pierce and impact resistance
-[*]Standard loot entries, item icons, base drop rates and coin quantities when available
-[/list]
+[b]Install[/b]
 
-Undiscovered and excluded enemies reveal no name, stats or loot. The mod reads save progression but does not write save data or alter combat, loot or progression.
+Requires the Windows game build and a working UE4SS installation with Lua support and LoopInGameThreadWithDelay. The development baseline was UE4SS v3.0.1 Beta #0; other builds are unverified.
 
-[b]Controls[/b]
-[list]
-[*]F9: show or hide the card
-[*]F10: open the displayed enemy's unlocked bestiary entry, including controller focus
-[/list]
+Download the BestiaryLens ZIP from [url=https://github.com/rafal-zelek/bestiary-lens-queens-domain-mod/releases]GitHub Releases[/url]. If no release is listed, no release package is available there yet. Source archives are not installable packages.
 
-[b]Requirements[/b]
-[list]
-[*]Queen's Domain, Windows game build (UE 4.27.2)
-[*]UE4SS with Lua support and LoopInGameThreadWithDelay
-[/list]
+Close the game. Find your UE4SS folder containing UE4SS-settings.ini and Mods (commonly QueensDomain/Binaries/Win64/ue4ss). Copy Mods/BestiaryLens from the ZIP into its Mods folder, keep the empty enabled.txt, and launch the game normally.
 
-UE4SS, the game and game assets are not included. Install and configure UE4SS separately. The mod references assets already present in the game.
+[b]Use[/b]
 
-[b]Limitations[/b]
-[list]
-[*]Stats and drop percentages are base values; luck, pity and game-specific overrides can change actual results.
-[*]The adapter reads two standard drop slots. Custom drop logic or unsupported schemas may produce incomplete or unknown loot information.
-[*]Targeting uses visible mesh bounds and an obstruction trace, not triangle-perfect hit detection.
-[*]Missing native captions are omitted; the mod does not add translations.
-[*]Compatibility with other UE4SS builds, long-session stability and all third-party mod combinations are not exhaustively tested.
-[/list]
+Aim at an unlocked enemy. Press F9 to toggle the card or F10 to open its bestiary entry. Stats and drop rates are base values; actual results can differ.
