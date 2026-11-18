@@ -17,7 +17,7 @@ local LENS_TIMEOUT_MS = 5000
 ---@field turnAround fun()
 
 ---@class (exact) BL.Lens
----@field waitFor fun(monster: BL.Monster): boolean
+---@field observe fun(monster: BL.Monster, holdMs: integer)
 
 ---@class (exact) BL.Gui
 ---@field lens BL.Lens
@@ -32,34 +32,72 @@ local LENS_TIMEOUT_MS = 5000
 
 ---@alias BL.Scenario fun(context: BL.ScenarioContext)
 
+---@alias BL.SmokeStep fun(done: fun())
+
 local Smoke = {}
 
 ---@param options BL.EngineBinding
 ---@param keyName BL.KeyName
 ---@param scenario BL.Scenario
 function Smoke.bind(options, keyName, scenario)
+    local running = false
     Engine.bindSmokeTest(keyName, function()
+        if running then
+            return
+        end
+        running = true
         options.log(options.marker .. ' smoke test started')
-        local task = coroutine.create(function()
+
+        ---@param callback fun()
+        local function guard(callback)
+            local ok, errorMessage = pcall(callback)
+            if not ok then
+                running = false
+                options.log('Smoke test failed: ' .. tostring(errorMessage))
+            end
+        end
+
+        ---@param milliseconds integer
+        ---@param callback fun()
+        local function after(milliseconds, callback)
+            Engine.schedule(milliseconds, function()
+                guard(callback)
+            end)
+        end
+
+        guard(function()
             local runtime = Engine.open(options)
             ---@type table<BL.Monster, integer>
             local actors = {}
+            ---@type BL.SmokeStep[]
+            local steps = {}
+
+            ---@param step BL.SmokeStep
+            local function enqueue(step)
+                steps[#steps + 1] = step
+            end
 
             ---@param milliseconds integer
             local function wait(milliseconds)
-                coroutine.yield(milliseconds)
+                enqueue(function(done)
+                    after(milliseconds, done)
+                end)
             end
 
             ---@param enemy BL.EnemyKind
             ---@param position BL.Position
             ---@return BL.Monster
             local function spawnMonster(enemy, position)
-                runtime.showMessage('spawning ' .. enemy)
-                local spawn = runtime.beginSpawn(enemy)
-                wait(SPAWN_SETTLE_MS)
                 ---@type BL.Monster
                 local monster = { kind = enemy }
-                actors[monster] = runtime.placeSpawnedMonster(spawn, position)
+                enqueue(function(done)
+                    runtime.showMessage('spawning ' .. enemy)
+                    local spawn = runtime.beginSpawn(enemy)
+                    after(SPAWN_SETTLE_MS, function()
+                        actors[monster] = runtime.placeSpawnedMonster(spawn, position)
+                        done()
+                    end)
+                end)
                 return monster
             end
 
@@ -70,45 +108,63 @@ function Smoke.bind(options, keyName, scenario)
 
             ---@param monster BL.Monster
             local function lookAt(monster)
-                runtime.lookAt(actors[monster])
+                enqueue(function(done)
+                    runtime.lookAt(actors[monster])
+                    done()
+                end)
+            end
+
+            local function turnAround()
+                enqueue(function(done)
+                    runtime.turnAround()
+                    done()
+                end)
             end
 
             ---@param monster BL.Monster
-            ---@return boolean
-            local function waitForLens(monster)
-                for elapsed = 0, LENS_TIMEOUT_MS, LENS_POLL_MS do
-                    if runtime.isLensTarget(actors[monster]) then
-                        runtime.showMessage(monster.kind .. ' hover=PASS')
-                        return true
+            ---@param holdMs integer
+            local function observe(monster, holdMs)
+                enqueue(function(done)
+                    local elapsed = 0
+                    local function poll()
+                        if runtime.isLensTarget(actors[monster]) then
+                            runtime.showMessage(monster.kind .. ' hover=PASS')
+                            after(holdMs, done)
+                        elseif elapsed >= LENS_TIMEOUT_MS then
+                            runtime.showMessage(monster.kind .. ' hover=FAIL target=' .. runtime.lensTargetName())
+                            done()
+                        else
+                            elapsed = elapsed + LENS_POLL_MS
+                            after(LENS_POLL_MS, poll)
+                        end
                     end
-                    if elapsed < LENS_TIMEOUT_MS then
-                        wait(LENS_POLL_MS)
-                    end
-                end
-                runtime.showMessage(monster.kind .. ' hover=FAIL target=' .. runtime.lensTargetName())
-                return false
+                    poll()
+                end)
             end
 
+            -- The scenario queues operations in order. Native calls run only in UE4SS callbacks.
             scenario({
                 world = { spawnMonster = spawnMonster },
-                player = { position = playerPosition, lookAt = lookAt, turnAround = runtime.turnAround },
-                gui = { lens = { waitFor = waitForLens } },
+                player = { position = playerPosition, lookAt = lookAt, turnAround = turnAround },
+                gui = { lens = { observe = observe } },
                 wait = wait,
             })
-            options.log('Smoke test complete')
-        end)
 
-        local function resume()
-            local ok, delay = coroutine.resume(task)
-            if not ok then
-                options.log('Smoke test failed: ' .. tostring(delay))
-            elseif coroutine.status(task) ~= 'dead' then
-                ---@cast delay integer
-                Engine.schedule(delay, resume)
+            local index = 0
+            local function advance()
+                index = index + 1
+                local step = steps[index]
+                if step then
+                    step(advance)
+                else
+                    running = false
+                    options.log('Smoke test complete')
+                end
             end
-        end
-        resume()
+            advance()
+        end)
     end)
+    options.log(options.marker .. ' smoke handler ready')
 end
 
 return Smoke

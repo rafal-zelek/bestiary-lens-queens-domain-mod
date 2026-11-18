@@ -12,9 +12,7 @@ local OBSERVATION_MS = 3000
 local function inspect(player, lens, wait, monster)
     player.lookAt(monster)
     wait(AIM_SETTLE_MS)
-    if lens.waitFor(monster) then
-        wait(OBSERVATION_MS)
-    end
+    lens.observe(monster, OBSERVATION_MS)
 end
 
 ---@param game BL.ScenarioContext
