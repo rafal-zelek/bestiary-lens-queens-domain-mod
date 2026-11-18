@@ -1,5 +1,5 @@
 do
-    local runScenario = require('f8_smoke')
+    local runScenario = require('smoke.test')
     local Enemies = require('sdk.domain.enemies')
     local Position = require('sdk.domain.position')
 
@@ -58,8 +58,8 @@ do
     }
     assert(#calls == #expected)
     for index, value in ipairs(expected) do
-        assert(calls[index] == value, 'unexpected F8 step ' .. index)
+        assert(calls[index] == value, 'unexpected smoke test step ' .. index)
     end
     assert(origin.x == 10 and origin.y == 20 and origin.z == 30)
-    print('F8 scenario composition passed')
+    print('Smoke scenario composition passed')
 end

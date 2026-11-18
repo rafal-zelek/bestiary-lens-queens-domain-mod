@@ -24,7 +24,7 @@ notes. The SDK remains tracked source data.
 ### Release procedure
 
 1. Update the mod version consistently in `tools/package.py` (`VERSION`), the README version/install
-   package filename, and the version marker in `Mods/BestiaryLens/Scripts/main.lua`.
+   package filename, and the version marker in `Mods/BestiaryLens/Scripts/bootstrap.lua`.
    The game SDK has its own game-version identity; do not rename it to the mod version.
 2. Commit the source, workflow, aggregated SDK, manifests and version migration reports, and push to `main`.
    Wait for green CI on that commit. Do not commit generated files from `build/`.

@@ -21,7 +21,14 @@
 ---@field y? number
 ---@field scale? number
 
+---@alias BL.KeyName string The name of a key in the UE4SS Key catalog.
+
+---@class (exact) BL.LensKeys
+---@field toggleCard BL.KeyName
+---@field openJournal BL.KeyName
+
 ---@class (exact) BL.LensConfig
+---@field keys BL.LensKeys
 ---@field targeting BL.TargetingSettings
 ---@field timing BL.LensTiming
 ---@field placement BL.CardPlacement
@@ -32,6 +39,10 @@ local CARD_WIDTH = 320
 
 ---@type BL.LensConfig
 local config = {
+    keys = {
+        toggleCard = 'F9',
+        openJournal = 'F10',
+    },
     targeting = {
         acquireDelay = 0.30,
         releaseDelay = 0.60,

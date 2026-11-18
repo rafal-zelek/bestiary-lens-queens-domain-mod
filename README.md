@@ -65,7 +65,7 @@ Edit `Mods/BestiaryLens/Scripts/config.lua` with the game closed.
 `acquireDelay` and `releaseDelay` are seconds; `maxDistance` and `aimPadding` are world units.
 `rightMargin` and `bottomMargin` place the card at the bottom right of the viewport.
 Use finite nonnegative numbers. Defaults: 0.30, 0.60, 3000, 12, 24, 24 respectively.
-F9 and F10 are defined at the bottom of `main.lua`; remap there if another mod uses them.
+Remap the card and journal shortcuts under `keys` in `Scripts/config.lua`. Use the key names from UE4SS.
 On Steam Deck, map controller back buttons to these keys through Steam Input if desired.
 
 ## Limitations

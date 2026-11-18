@@ -7,7 +7,7 @@ procedures in `CONTRIBUTING.md` and `docs/`.
 ## Layout
 
 - `Mods/BestiaryLens/` — the shipped mod. `enabled.txt` (intentionally empty) plus
-  `Scripts/` contains the entry point, card modules, F8 scenario and its internal SDK.
+  `Scripts/` contains the entry point, card modules, development smoke scenario and its internal SDK.
 - `tools/` — developer Python and shell tools, plus `type_exporter.lua` (the SDK capture bridge
   installed on a device). Not shipped in the mod ZIP.
 - `tests/` — Python `unittest` suite (`test_*.py`) and the Lua logic harness
@@ -18,8 +18,9 @@ procedures in `CONTRIBUTING.md` and `docs/`.
 
 ## Mod architecture and data flow
 
-- `main.lua` wires configuration, logging and the F8 scenario into `sdk/domain/game.lua`.
-- `config.lua` names targeting thresholds, update timing and placement.
+- `main.lua` starts the shared bootstrap. Development deploys use a separate smoke entry point.
+- `config.lua` names the card and journal keys, targeting thresholds, update timing and placement.
+  The development smoke key lives in `smoke/config.lua`.
 - `card_model.lua` composes and sanitizes the presentation data. Locked entries expose no
   enemy name, stats or drops. `card_view.lua` formats values and chooses presentation colors.
 - `sdk/domain/` owns the typed contracts, targeting geometry and debounce, and card update
@@ -72,7 +73,7 @@ tuple and `commands()` there.
 
 1. `unittest discover` over `tests/test_*.py` (Python tooling, packaging, workflow and SDK tests).
 2. A Lua 5.4 harness: compiles all runtime Lua files with `luac -p`, preloads the modules
-   and runs the model, targeting, presentation, Lens and F8 assertions without starting UE4SS.
+   and runs the model, targeting, presentation, Lens and smoke assertions without starting UE4SS.
 
 Lua tests monkeypatch Unreal globals (`FindAllOf`, `FText`, ...) directly, so keep pure logic
 free of Unreal calls to remain testable. UObject operations must run on the game thread
@@ -99,10 +100,10 @@ tests are not proof of in-game behavior.
 ## Gotchas
 
 - Version identity: the mod version is duplicated in `tools/package.py` (`VERSION`), the README,
-  and the load marker in `main.lua`; the release tag must equal `v` + `VERSION`. The game SDK has
+  and the load message in `bootstrap.lua`; the release tag must equal `v` + `VERSION`. The game SDK has
   its own version and must not be renamed to the mod version. See `docs/releasing.md`.
 - Release ZIPs use explicit allowlists (`tools/package.py` `MOD_FILES`); `tools/deploy.py`
-  imports that same list. Adding a runtime file means adding it to `MOD_FILES`. Development
+  uses the production list by default and adds the smoke runner only with `--with-smoke`. Development
   tools, debug files and private data must never enter the mod ZIP. Verify members and checksums.
 - Deploy with the game stopped; the helper stages outside `Mods`, backs up any prior mod under
   `ue4ss/bestiary-lens-backups/`, verifies SHA-256, and never starts/restarts the game.

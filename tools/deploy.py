@@ -60,12 +60,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--ue4ss', required=True, help='UE4SS directory on the target machine')
     parser.add_argument('--host', help='Optional SSH host or SSH config alias; no default')
+    parser.add_argument('--with-smoke', action='store_true', help='Install the development smoke test and its keybind')
     args = parser.parse_args()
     if args.host and args.host.startswith('-'):
         parser.error('SSH host cannot begin with a dash')
-    from package import MOD_FILES
+    from package import install_sources
     root = Path(__file__).resolve().parents[1] / 'Mods' / MOD
-    payload = {name: base64.b64encode((root/name).read_bytes()).decode() for name in MOD_FILES}
+    payload = {name: base64.b64encode((root/source).read_bytes()).decode()
+               for name, source in install_sources(args.with_smoke).items()}
     if args.host:
         code = ('import base64,hashlib,json,tempfile,uuid\n'
                 'from pathlib import Path,PurePosixPath\nMOD="BestiaryLens"\n' + inspect.getsource(install) +

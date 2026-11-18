@@ -1,4 +1,5 @@
 local Enemies = require('sdk.domain.enemies')
+local Input = require('sdk.engine.input')
 
 ---@type table<BL.EnemyKind, string>
 local FIND_ENEMY_DATA = {
@@ -15,7 +16,7 @@ local SWEEP_PLACEMENT, TELEPORT_PLACEMENT = false, true
 ---@class (exact) BL.EngineBinding
 ---@field log fun(message: string)
 ---@field marker string
----@field readLensTarget fun(): UObject?
+---@field readLensTarget fun(): BL.LensTarget?
 
 ---@class (exact) BL.PendingSpawn
 ---@field dataAddress integer
@@ -53,12 +54,7 @@ end
 
 local Engine = {}
 
----@param callback fun()
-function Engine.bindSmokeTest(callback)
-    RegisterKeyBind(Key.F8, function()
-        ExecuteInGameThread(callback)
-    end)
-end
+Engine.bindSmokeTest = Input.bind
 
 ---@param milliseconds integer
 ---@param callback fun()
@@ -139,14 +135,14 @@ function Engine.open(options)
     ---@return boolean
     function runtime.isLensTarget(address)
         assert(valid(spawnedActors[address]), 'spawned actor is invalid')
-        local target = options.readLensTarget()
-        return target ~= nil and valid(target) and address == target:GetAddress()
+        local target = options.readLensTarget() --[[@as BL.NativeLensTarget?]]
+        return target ~= nil and valid(target.actor) and address == target.actor:GetAddress()
     end
 
     ---@return string
     function runtime.lensTargetName()
-        local target = options.readLensTarget()
-        return target ~= nil and valid(target) and target:GetFullName() or 'none'
+        local target = options.readLensTarget() --[[@as BL.NativeLensTarget?]]
+        return target ~= nil and valid(target.actor) and target.actor:GetFullName() or 'none'
     end
 
     ---@param address integer

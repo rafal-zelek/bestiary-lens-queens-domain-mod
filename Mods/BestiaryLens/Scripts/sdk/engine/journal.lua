@@ -13,7 +13,7 @@ function Journal.new(log)
             return
         end
         if not valid(lastHud) then
-            log('F10: gameplay HUD not ready')
+            log('journal: gameplay HUD not ready')
             return
         end
         local pawn = lastHud:GetOwningPlayerPawn()
@@ -21,21 +21,21 @@ function Journal.new(log)
             return
         end
         if pawn.IsInGameplayModal then
-            log('F10: close the current menu first')
+            log('journal: close the current menu first')
             return
         end
         local enemy = currentTarget
         if not valid(enemy) or not valid(enemy.Data) then
-            log('F10: no hovered enemy')
+            log('journal: no hovered enemy')
             return
         end
         local data = enemy.Data
         if not EnemyData.unlocked(data) then
-            log('F10: entry locked or absent')
+            log('journal: entry locked or absent')
             return
         end
         if data.bDoNotAllowInBestiary then
-            log('F10: this enemy has no bestiary entry')
+            log('journal: this enemy has no bestiary entry')
             return
         end
         pendingJournal, pendingAttempts = data, 0
@@ -44,10 +44,10 @@ function Journal.new(log)
         end)
         if not ok then
             pendingJournal = nil
-            log('F10 open failed: ' .. tostring(err))
+            log('journal open failed: ' .. tostring(err))
             return
         end
-        log('F10: opening bestiary for ' .. data:GetFullName())
+        log('journal: opening bestiary for ' .. data:GetFullName())
     end
 
     function journal.poll()
@@ -56,7 +56,7 @@ function Journal.new(log)
         end
         pendingAttempts = pendingAttempts + 1
         if not valid(pendingJournal) or pendingAttempts > MAX_ATTEMPTS then
-            log('F10: journal timeout')
+            log('journal: journal timeout')
             pendingJournal = nil
             return
         end
@@ -82,7 +82,7 @@ function Journal.new(log)
                     end
                     if not valid(chosen) then
                         if pendingAttempts >= ENTRY_SEARCH_ATTEMPTS then
-                            log('F10: entry absent from journal list; blocked')
+                            log('journal: entry absent from journal list; blocked')
                             return true
                         end
                         return false
@@ -104,9 +104,9 @@ function Journal.new(log)
                     j.EntryScrollbox:ScrollWidgetIntoView(chosen, false, 0, 0)
                     -- Same journal action as pressing A/clicking the selected entry.
                     j:itemEntryClicked(chosen)
-                    log('F10: activated entry via itemEntryClicked (A)')
+                    log('journal: activated entry via itemEntryClicked')
                     log(
-                        'F10: selected index='
+                        'journal: selected index='
                             .. tostring(chosen.Index)
                             .. ' data='
                             .. data:GetFName():ToString()
@@ -118,7 +118,7 @@ function Journal.new(log)
                     return true
                 end)
                 if not ok then
-                    log('F10 selection failed: ' .. tostring(done))
+                    log('journal selection failed: ' .. tostring(done))
                     pendingJournal = nil
                 elseif done then
                     pendingJournal = nil

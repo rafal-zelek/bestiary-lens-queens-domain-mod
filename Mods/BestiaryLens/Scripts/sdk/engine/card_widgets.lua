@@ -36,7 +36,8 @@ local function set(t, value)
     t:SetText(text or FText(''))
 end
 ---@param placement BL.CardPlacement
-function V.create(hud, style, placement)
+---@param journalKey BL.KeyName
+function V.create(hud, style, placement, journalKey)
     local self = setmetatable(
         { hud = hud, placement = placement, stats = {}, resists = {}, drops = {} },
         { __index = V }
@@ -151,7 +152,7 @@ function V.create(hud, style, placement)
     stack:AddChildToVerticalBox(hint)
     self.hintRow = hint
     self.key = text('HintKey', FONT_SIZE.hint)
-    set(self.key, FText('[F10] '))
+    set(self.key, FText('[' .. journalKey .. '] '))
     hint:AddChildToHorizontalBox(self.key)
     self.hint = text('Hint', FONT_SIZE.hint)
     hint:AddChildToHorizontalBox(self.hint)

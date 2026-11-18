@@ -2,6 +2,7 @@ local Objects = require('sdk.engine.objects')
 local CardWidgets = require('sdk.engine.card_widgets')
 local EnemyData = require('sdk.engine.enemy_data')
 local Journal = require('sdk.engine.journal')
+local Input = require('sdk.engine.input')
 local Targeting = require('sdk.domain.targeting')
 
 local valid, attempt = Objects.valid, Objects.attempt
@@ -42,7 +43,7 @@ local NATIVE_LABELS = {
 ---@field actor AEnemyBase_C
 
 ---@class BL.NativeLensPort: BL.LensPort
----@field readLensTarget fun(): AEnemyBase_C?
+---@field readLensTarget fun(): BL.LensTarget?
 ---@field start fun(onTick: fun(dt: number), toggle: fun())
 
 local Engine = {}
@@ -64,7 +65,7 @@ function Engine.new(config, log)
     local journal = Journal.new(log)
     local errors, traceErrors = 0, 0
     local lastHud
-    ---@type AEnemyBase_C?
+    ---@type BL.NativeLensTarget?
     local currentTarget
     local candidates, scanAge = {}, config.targeting.scanInterval
     local nativeLabels, cardHud, gameplayView
@@ -212,7 +213,7 @@ function Engine.new(config, log)
             itemFrame = hud.ConsumableHUD.ItemFrame.Brush,
         }
         removeOld(root)
-        gameplayView = CardWidgets.create(hud, viewStyle, config.placement)
+        gameplayView = CardWidgets.create(hud, viewStyle, config.placement, config.keys.openJournal)
         constructionGeneration = gameplayView.generation
         nativeLabels = {}
         nativeTextsReady = false
@@ -406,7 +407,7 @@ function Engine.new(config, log)
     ---@param target BL.LensTarget?
     function runtime.setTarget(target)
         ---@cast target BL.NativeLensTarget?
-        currentTarget = target and target.actor or nil
+        currentTarget = target
     end
 
     function runtime.readLensTarget()
@@ -485,17 +486,13 @@ function Engine.new(config, log)
             end
             journal.poll()
         end)
-        RegisterKeyBind(Key.F10, function()
-            ExecuteInGameThread(function()
-                local ok, err = pcall(journal.open, lastHud, currentTarget)
-                if not ok then
-                    log('F10: ' .. tostring(err))
-                end
-            end)
+        Input.bind(config.keys.openJournal, function()
+            local ok, err = pcall(journal.open, lastHud, currentTarget and currentTarget.actor)
+            if not ok then
+                log('journal: ' .. tostring(err))
+            end
         end)
-        RegisterKeyBind(Key.F9, function()
-            ExecuteInGameThread(toggle)
-        end)
+        Input.bind(config.keys.toggleCard, toggle)
     end
 
     return runtime
