@@ -27,7 +27,7 @@ for file in sorted(scripts.rglob('*.lua')):
     if file != scripts/'main.lua':
         name = '.'.join(file.relative_to(scripts).with_suffix('').parts)
         script += 'package.preload["'+name+'"]=function() return assert(load([====['+source+']====]))() end\n'
-for name in ('card.lua', 'model.lua', 'lens.lua', 'smoke_scenario.lua'):
+for name in ('card.lua', 'model.lua', 'lens.lua', 'smoke_scenario.lua', 'runtime_menu.lua'):
     script += (ROOT/'tests'/name).read_text()+'\n'
 run(['lua', '-'], script)
 print('Bestiary Lens: all automated checks passed')

@@ -167,4 +167,9 @@ function Smoke.bind(options, keyName, scenario)
     options.log(options.marker .. ' smoke handler ready')
 end
 
+---@param scripts string
+function Smoke.startMenuBridge(scripts)
+    require('sdk.engine.menu_bridge').start(scripts)
+end
+
 return Smoke
