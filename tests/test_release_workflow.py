@@ -167,9 +167,9 @@ class WorkflowStructureTests(unittest.TestCase):
             return result
         for event, ref, eligible in [('push', 'refs/heads/main', False),
                                      ('pull_request', 'refs/pull/42/merge', False),
-                                     ('workflow_dispatch', 'refs/tags/v0.1.0', False),
+                                     ('workflow_dispatch', 'refs/tags/v1.0.0', False),
                                      ('push', 'refs/tags/not-a-version', False),
-                                     ('push', 'refs/tags/v0.1.0', True)]:
+                                     ('push', 'refs/tags/v1.0.0', True)]:
             for ready in (False, True):
                 for success in (False, True):
                     with self.subTest(event=event, ref=ref, ready=ready, success=success):
@@ -214,8 +214,8 @@ class WorkflowStructureTests(unittest.TestCase):
             package = root / 'tools/package.py'
             build = root / 'build'
             build.mkdir()
-            archive = build / 'BestiaryLens-0.1.0.zip'
-            checksum = build / 'BestiaryLens-0.1.0.zip.sha256'
+            archive = build / 'BestiaryLens-1.0.0.zip'
+            checksum = build / 'BestiaryLens-1.0.0.zip.sha256'
             archive.write_bytes(b'zip')
             checksum.write_text('checksum')
             (build / 'BestiaryLens-0.0.9.zip').write_bytes(b'stale')
@@ -227,20 +227,20 @@ class WorkflowStructureTests(unittest.TestCase):
                 return subprocess.run(['python3', '-B', '-c', script], cwd=root,
                                       env=os.environ | {'GITHUB_OUTPUT': str(output)}, capture_output=True, text=True)
 
-            result = run('0.1.0')
+            result = run('1.0.0')
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertEqual(output.read_text(), 'mod_version=0.1.0\n')
+            self.assertEqual(output.read_text(), 'mod_version=1.0.0\n')
             for version in ('../escape', '', 'bad/version'):
                 with self.subTest(version=version):
                     self.assertNotEqual(run(version).returncode, 0)
                     self.assertEqual(output.read_text(), '')
             checksum.unlink()
-            self.assertNotEqual(run('0.1.0').returncode, 0)
+            self.assertNotEqual(run('1.0.0').returncode, 0)
             self.assertEqual(output.read_text(), '')
             outside = root / 'outside'
             outside.write_text('checksum')
             checksum.symlink_to(outside)
-            self.assertNotEqual(run('0.1.0').returncode, 0)
+            self.assertNotEqual(run('1.0.0').returncode, 0)
             self.assertEqual(output.read_text(), '')
             checksum.unlink()
             archive.unlink()
@@ -251,7 +251,7 @@ class WorkflowStructureTests(unittest.TestCase):
             (outside_dir / archive.name).write_bytes(b'zip')
             (outside_dir / checksum.name).write_text('checksum')
             build.symlink_to(outside_dir, target_is_directory=True)
-            self.assertNotEqual(run('0.1.0').returncode, 0)
+            self.assertNotEqual(run('1.0.0').returncode, 0)
             self.assertEqual(output.read_text(), '')
 
     def test_mod_artifact_is_wired_to_publishers(self):

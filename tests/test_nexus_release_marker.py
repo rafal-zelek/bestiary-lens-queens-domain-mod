@@ -30,7 +30,7 @@ if args[:2] == ['release', 'view']:
     elif mode == 'marker-present':
         print('nexus-upload-attempted.txt')
     else:
-        print('BestiaryLens-0.1.0.zip')
+        print('BestiaryLens-1.0.0.zip')
 elif args[:2] == ['release', 'upload']:
     if mode == 'upload-fail':
         sys.exit(1)
@@ -48,7 +48,7 @@ else:
                 'GITHUB_SHA': 'deadbeef',
             }
             return subprocess.run(
-                ['bash', str(SCRIPT), command, 'v0.1.0'],
+                ['bash', str(SCRIPT), command, 'v1.0.0'],
                 cwd=ROOT, env=env, text=True, capture_output=True, check=False,
             )
 
