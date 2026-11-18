@@ -1,5 +1,6 @@
 local Enemies = require('sdk.domain.enemies')
 local Input = require('sdk.engine.input')
+local DebugHud = require('sdk.engine.debug_hud')
 
 ---@type table<BL.EnemyKind, string>
 local FIND_ENEMY_DATA = {
@@ -174,28 +175,15 @@ function Engine.open(options)
         log('aim set actor=' .. enemy:GetFullName() .. ' yaw=' .. tostring(rotation.Yaw))
     end
 
+    local showOnHud = DebugHud.new(pawn, options.marker)
+    local reportedHudError = false
     ---@param message string
     function runtime.showMessage(message)
-        local text = options.marker .. ' ' .. message
-        log(text)
-        local ok, err = pcall(function()
-            local helpers = StaticFindObject('/Script/FB_Utils.Default__FB_BPHelpers') --[[@as UFB_BPHelpers]]
-            if helpers and helpers:IsValid() then
-                helpers:FB_PrintString(
-                    pawn,
-                    text --[[@as FString]],
-                    true,
-                    true,
-                    true,
-                    { R = 1, G = 0.75, B = 0.1, A = 1 },
-                    8
-                )
-            else
-                error('FB_BPHelpers default object unavailable')
-            end
-        end)
-        if not ok then
-            log('screen message failed: ' .. tostring(err))
+        log(options.marker .. ' ' .. message)
+        local ok, errorMessage = pcall(showOnHud, message)
+        if not ok and not reportedHudError then
+            reportedHudError = true
+            log('smoke HUD failed: ' .. tostring(errorMessage))
         end
     end
     return runtime
