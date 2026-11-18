@@ -74,6 +74,10 @@ python3 tools/deploy.py --ue4ss "/path/to/ue4ss"
 python3 tools/deploy.py --host YOUR_SSH_ALIAS --ue4ss "/path/on/target/to/ue4ss"
 ```
 
+Both commands install the production payload by default. Add `--with-smoke` to install the
+development entry point and `smoke.test.lua`. The test shortcut is configured in
+`Scripts/smoke/config.lua`. The card and journal shortcuts are in `Scripts/config.lua`.
+A default install after a smoke install replaces the active directory and backs up the prior copy.
 On Windows, use the corresponding Windows path for local installation.
 The tool stages the complete mod outside `Mods`, backs up any previous `BestiaryLens` directory
 under `ue4ss/bestiary-lens-backups/`, installs the new directory and verifies SHA-256 readback.
@@ -198,7 +202,7 @@ The helper is a development tool and is excluded from the release mod package.
 
 `tools/package.py` (with `VERSION` defined in that file) builds `build/BestiaryLens-0.1.0.zip` and its `.zip.sha256` sidecar
 from an explicit allowlist. The install ZIP contains the mod payload plus the user README and
-`LICENSE`; it excludes `tools/deploy.py`, `tools/package.py` and all other development/debug tools.
+`LICENSE`; it excludes smoke tests, their entry point, runner, and development tools.
 The SDK, its manifest and UE4SS license are tracked source data, not a separate package.
 Tests, tooling/configuration files, private notes, logs, backup data and Git metadata do not
 enter the ZIP.

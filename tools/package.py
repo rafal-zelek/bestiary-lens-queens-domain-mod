@@ -5,10 +5,31 @@ from pathlib import Path
 import zipfile
 
 VERSION = '0.1.0'
-MOD_FILES = ('enabled.txt', 'Scripts/main.lua', 'Scripts/config.lua',
-             'Scripts/card_model.lua', 'Scripts/card_view.lua')
+MOD_FILES = (
+    'enabled.txt', 'Scripts/main.lua', 'Scripts/bootstrap.lua', 'Scripts/config.lua',
+    'Scripts/card_model.lua', 'Scripts/card_view.lua',
+    'Scripts/sdk/domain/game.lua', 'Scripts/sdk/domain/lens.lua', 'Scripts/sdk/domain/targeting.lua',
+    'Scripts/sdk/engine/card_widgets.lua', 'Scripts/sdk/engine/enemy_data.lua',
+    'Scripts/sdk/engine/input.lua', 'Scripts/sdk/engine/journal.lua',
+    'Scripts/sdk/engine/lens_runtime.lua', 'Scripts/sdk/engine/objects.lua',
+)
+SMOKE_FILES = (
+    'Scripts/smoke.test.lua', 'Scripts/smoke/config.lua',
+    'Scripts/sdk/domain/direction.lua', 'Scripts/sdk/domain/enemies.lua',
+    'Scripts/sdk/domain/position.lua', 'Scripts/sdk/domain/smoke.lua',
+    'Scripts/sdk/engine/bestiary_runtime.lua', 'Scripts/sdk/engine/debug_hud.lua',
+)
+SMOKE_ENTRY = 'Scripts/smoke/entry.lua'
 PAYLOAD = tuple('Mods/BestiaryLens/' + name for name in MOD_FILES) + (
     'README.md', 'LICENSE')
+
+def install_sources(with_smoke=False):
+    # Map installed paths to repository sources for the selected install profile.
+    sources = {name: name for name in MOD_FILES}
+    if with_smoke:
+        sources.update((name, name) for name in SMOKE_FILES)
+        sources['Scripts/main.lua'] = SMOKE_ENTRY
+    return sources
 
 def build(root):
     root = Path(root)
