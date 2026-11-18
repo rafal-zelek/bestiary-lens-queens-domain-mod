@@ -19,6 +19,7 @@ SMOKE_FILES = (
     'Scripts/sdk/domain/position.lua', 'Scripts/sdk/domain/runtime_menu.lua',
     'Scripts/sdk/domain/smoke.lua',
     'Scripts/sdk/engine/bestiary_runtime.lua', 'Scripts/sdk/engine/debug_hud.lua',
+    'Scripts/sdk/engine/menu_bridge.lua',
 )
 SMOKE_ENTRY = 'Scripts/smoke/entry.lua'
 PAYLOAD = tuple('Mods/BestiaryLens/' + name for name in MOD_FILES) + (

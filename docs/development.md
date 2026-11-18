@@ -234,3 +234,24 @@ resolve only one regular file in the expected profile, and after loading, indepe
 the exact active save and playable state. A different active save, unexpected modal, duplicate row
 identity, or unknown slot list stops the run. Awaiting a transition needs a bounded deadline.
 No durable fixture or save identity mechanism has been verified on device yet.
+
+Run the automated **title menu** check from a trusted development host:
+
+```sh
+python3 -B tools/runtime_test.py /path/to/private-deck-config.json
+```
+
+The private JSON has `host` (existing SSH alias), `account` (Steam AccountID as an
+integer), and `game_id` (the existing non-Steam shortcut's 64-bit SteamGameId as
+a string). Keep it outside the checkout. The Deck must already have the development
+payload installed with `--with-smoke` using the normal stopped-game procedure.
+Use `--offline-image bestiary-lens-ci` to run the offline phase in the prebuilt
+container if the pinned test tools are unavailable on the host.
+
+The command always runs the offline suite and reports its exit status independently
+of the Deck result. For the Deck phase it verifies that the shortcut belongs to the
+active Steam profile, reuses a matching process or launches the existing shortcut once,
+then waits for the development bridge. The test opens the real file selector and returns
+to the title menu. It never selects a file. A failed launch, unrecognized screen, or
+missing transition has a bounded timeout and leaves a nonzero result. Run only on a
+dedicated test device. This check does not exercise a loaded save or the F8/F10 scenarios.
