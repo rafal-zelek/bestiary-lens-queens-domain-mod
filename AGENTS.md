@@ -105,6 +105,8 @@ tests are not proof of in-game behavior.
 - Release ZIPs use explicit allowlists (`tools/package.py` `MOD_FILES`); `tools/deploy.py`
   uses the production list by default and adds the smoke runner only with `--with-smoke`. Development
   tools, debug files and private data must never enter the mod ZIP. Verify members and checksums.
+- For Steam Deck deployments, use the development payload with `--with-smoke` unless the user
+  explicitly requests production. The release ZIP always uses the production payload.
 - Deploy with the game stopped; the helper stages outside `Mods`, backs up any prior mod under
   `ue4ss/bestiary-lens-backups/`, verifies SHA-256, and never starts/restarts the game.
 - `AGENTS.md` and `CLAUDE.md` are listed in `.gitignore` (they are treated as local notes);
