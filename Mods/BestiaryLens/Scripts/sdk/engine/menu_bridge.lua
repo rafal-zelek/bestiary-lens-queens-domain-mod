@@ -30,9 +30,6 @@ local function gameplay()
     if not index or index < 0 or index > 4 then
         return 'blocked'
     end
-    if not expectedSaveIndex or index ~= expectedSaveIndex then
-        return 'blocked-identity'
-    end
     local playable = false
     for _, hud in ipairs(FindAllOf('FS_PlayerHUD_C') or {}) do
         ---@cast hud UFS_PlayerHUD_C
@@ -45,6 +42,11 @@ local function gameplay()
                 playable = true
             end
         end
+    end
+    if not expectedSaveIndex or index ~= expectedSaveIndex then
+        -- The index reads as the default while a load is in flight; only a
+        -- playable world on the wrong slot is a real mismatch.
+        return playable and 'blocked-identity' or 'starting'
     end
     return 'slot-' .. tostring(index) .. (playable and '-playable' or '-loading')
 end
