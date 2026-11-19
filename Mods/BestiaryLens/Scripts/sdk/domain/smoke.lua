@@ -41,7 +41,7 @@ local Smoke = {}
 ---@param scenario BL.Scenario
 function Smoke.bind(options, keyName, scenario)
     local running = false
-    Engine.bindSmokeTest(keyName, function()
+    local function run()
         if running then
             return
         end
@@ -163,13 +163,15 @@ function Smoke.bind(options, keyName, scenario)
             end
             advance()
         end)
-    end)
+    end
+    Engine.bindSmokeTest(keyName, run)
     options.log(options.marker .. ' smoke handler ready')
+    return run
 end
 
 ---@param scripts string
-function Smoke.startMenuBridge(scripts)
-    require('sdk.engine.menu_bridge').start(scripts)
+function Smoke.startMenuBridge(scripts, runScenario)
+    require('sdk.engine.menu_bridge').start(scripts, runScenario)
 end
 
 return Smoke
