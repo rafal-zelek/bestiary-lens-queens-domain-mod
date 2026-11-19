@@ -106,7 +106,7 @@ function Journal.new(log)
                     j:itemEntryClicked(chosen)
                     log('journal: activated entry via itemEntryClicked')
                     log(
-                        'journal: selected index='
+                        'journal: ENTRY_OPENED index='
                             .. tostring(chosen.Index)
                             .. ' data='
                             .. data:GetFName():ToString()

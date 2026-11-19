@@ -3,6 +3,7 @@
 import argparse
 from pathlib import Path
 import shlex
+import shutil
 import subprocess
 import sys
 
@@ -12,6 +13,12 @@ parser.add_argument('--host', help='SSH host with lua and luac installed; option
 args = parser.parse_args()
 if args.host and args.host.startswith('-'):
     parser.error('SSH host cannot begin with a dash')
+if not args.host and shutil.which('luac') is None:
+    raise SystemExit(
+        'luac is required to run the Lua suites. Use the repository Docker check command: '
+        'docker build -t bestiary-lens-ci . && docker run --rm --network none '
+        '--mount "type=bind,source=$PWD,target=/workspace" bestiary-lens-ci check'
+    )
 subprocess.run([sys.executable, '-B', '-m', 'unittest', 'discover', '-s', str(ROOT/'tests'), '-p', 'test_*.py'], check=True)
 
 def run(command, data):
@@ -27,7 +34,7 @@ for file in sorted(scripts.rglob('*.lua')):
     if file != scripts/'main.lua':
         name = '.'.join(file.relative_to(scripts).with_suffix('').parts)
         script += 'package.preload["'+name+'"]=function() return assert(load([====['+source+']====]))() end\n'
-for name in ('card.lua', 'model.lua', 'lens.lua', 'smoke_scenario.lua', 'runtime_menu.lua'):
+for name in ('card.lua', 'model.lua', 'lens.lua', 'smoke_scenario.lua', 'runtime_menu.lua', 'menu_bridge.lua'):
     script += (ROOT/'tests'/name).read_text()+'\n'
 run(['lua', '-'], script)
 print('Bestiary Lens: all automated checks passed')

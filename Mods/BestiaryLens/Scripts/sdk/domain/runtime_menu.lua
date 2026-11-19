@@ -3,12 +3,12 @@
 
 ---@class BL.RuntimeFixture
 ---@field profile string Resolved identity of the dedicated profile.
----@field save string Resolved identity of the dedicated save, independent of the displayed row.
+---@field savePath string Path/name of the disposable World1 save file.
 ---@field readiness 'playable'
 
 ---@class BL.RuntimeSlot
 ---@field index integer
----@field save? string
+---@field path? string
 ---@field kind BL.RuntimeSlotKind
 
 ---@class BL.RuntimeObservation
@@ -16,7 +16,7 @@
 ---@field profile? string Independently observed profile identity.
 ---@field interactive? boolean The adapter positively verified active screen and focus.
 ---@field slots? BL.RuntimeSlot[] Complete list from the active file selector.
----@field loadedSave? string Independently observed active save identity.
+---@field activeSlotIndex? integer Selected save slot index.
 ---@field playable? boolean The adapter positively verified the live world, player and HUD.
 
 ---@class BL.RuntimeDecision
@@ -41,17 +41,17 @@ local function chooseFile(fixture, slots)
             return { kind = 'stop', reason = 'ambiguous-slot' }
         end
         seen[index] = true
-        if slot.save == fixture.save then
-            if candidate then
-                return { kind = 'stop', reason = 'ambiguous-slot' }
-            end
+        if index == 1 then
             candidate = slot
         end
     end
     if not candidate then
         return { kind = 'stop', reason = 'missing-slot' }
     end
-    if candidate.kind ~= 'regular' then
+    if candidate.path and candidate.path ~= fixture.savePath then
+        return { kind = 'stop', reason = 'wrong-slot-path' }
+    end
+    if candidate.kind == 'backup' or candidate.kind == 'suspend' then
         return { kind = 'stop', reason = 'unsafe-slot' }
     end
     return { kind = 'choose-file', index = candidate.index }
@@ -63,7 +63,7 @@ end
 ---@param observation BL.RuntimeObservation
 ---@return BL.RuntimeDecision
 function Menu.decide(fixture, observation)
-    if fixture.profile == '' or fixture.save == '' or fixture.readiness ~= 'playable' then
+    if fixture.profile == '' or fixture.savePath == '' or fixture.readiness ~= 'playable' then
         return { kind = 'stop', reason = 'invalid-fixture' }
     end
     local screen = observation.screen
@@ -77,8 +77,8 @@ function Menu.decide(fixture, observation)
         return { kind = 'wait', reason = 'loading' }
     end
     if screen == 'gameplay' then
-        if observation.loadedSave ~= fixture.save then
-            return { kind = 'stop', reason = 'save-mismatch' }
+        if observation.activeSlotIndex ~= 1 then
+            return { kind = 'stop', reason = 'wrong-slot-index' }
         end
         if observation.playable ~= true then
             return { kind = 'wait', reason = 'gameplay-not-ready' }

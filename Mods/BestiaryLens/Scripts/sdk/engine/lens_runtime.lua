@@ -487,6 +487,12 @@ function Engine.new(config, log)
             journal.poll()
         end)
         Input.bind(config.keys.openJournal, function()
+            local target = currentTarget and currentTarget.actor
+            local targetName = 'none'
+            if target and valid(target) then
+                targetName = target:GetFullName()
+            end
+            log('journal: F10 input received target=' .. targetName)
             local ok, err = pcall(journal.open, lastHud, currentTarget and currentTarget.actor)
             if not ok then
                 log('journal: ' .. tostring(err))

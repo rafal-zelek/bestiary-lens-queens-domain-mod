@@ -26,11 +26,21 @@ The same two commands also work outside GitHub Actions with Docker available.
 The explicit `.dockerignore` allowlist excludes Git metadata, private notes, backups and build artifacts.
 
 For current working-tree sources and persistent reports/artifacts, bind-mount the repository.
+This is the single supported command for the full offline check (including Python and all Lua suites):
 These examples use POSIX shell syntax (on Linux, optionally add `--user "$(id -u):$(id -g)"`
 to avoid root-owned generated files):
 
 ```sh
 docker run --rm --network none --mount "type=bind,source=$PWD,target=/workspace" bestiary-lens-ci check
+```
+
+Build the image first if needed with `docker build -t bestiary-lens-ci .`. The mounted `check`
+uses current working-tree sources and runs the same full gate as CI; the image provides `lua` and
+`luac`, so no host Lua tooling is needed. Running `python3 -B tests/run.py` directly on a host
+without `luac` prints this Docker command rather than stopping with an unhelpful missing-executable
+error.
+
+```sh
 docker run --rm --network none --mount "type=bind,source=$PWD,target=/workspace" bestiary-lens-ci format
 docker run --rm --network none --mount "type=bind,source=$PWD,target=/workspace" bestiary-lens-ci package
 ```

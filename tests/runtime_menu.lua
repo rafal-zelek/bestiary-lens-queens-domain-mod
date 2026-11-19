@@ -1,6 +1,6 @@
 local Menu = require('sdk.domain.runtime_menu')
 
-local fixture = { profile = 'test-profile', save = 'dedicated-fixture', readiness = 'playable' }
+local fixture = { profile = 'test-profile', savePath = 'World1.sav', readiness = 'playable' }
 
 local function expect(observation, kind, reason)
     local result = Menu.decide(fixture, observation)
@@ -16,35 +16,35 @@ expect({ screen = 'main-menu', interactive = true }, 'stop', 'profile-mismatch')
 expect({ screen = 'modal', profile = 'test-profile' }, 'stop', 'unexpected-screen')
 expect({ screen = 'loading', profile = 'test-profile' }, 'wait', 'loading')
 
-local exact = { index = 2, save = 'dedicated-fixture', kind = 'regular' }
+local world1 = { index = 1, path = 'World1.sav', kind = 'regular' }
 local files = {
     screen = 'file-select',
     profile = 'test-profile',
     interactive = true,
-    slots = { { index = 0, kind = 'empty' }, exact },
+    slots = { { index = 0, path = 'World0.sav', kind = 'regular' }, world1 },
 }
-assert(expect(files, 'choose-file').index == 2)
-files.interactive = false
-expect(files, 'wait', 'menu-not-interactive')
-files.interactive = true
-files.slots = { exact, { index = 2, kind = 'empty' } }
+assert(expect(files, 'choose-file').index == 1)
+files.slots = { world1, { index = 1, path = 'World0.sav', kind = 'regular' } }
 expect(files, 'stop', 'ambiguous-slot')
-files.slots = { exact, { index = 3, save = 'dedicated-fixture', kind = 'regular' } }
-expect(files, 'stop', 'ambiguous-slot')
-for _, kind in ipairs({ 'empty', 'backup', 'suspend' }) do
-    files.slots = { { index = 2, save = 'dedicated-fixture', kind = kind } }
+files.slots = { world1, { index = 2, path = 'World0.sav', kind = 'regular' } }
+assert(expect(files, 'choose-file').index == 1) -- duplicate/content equality elsewhere is irrelevant
+for _, kind in ipairs({ 'backup', 'suspend' }) do
+    files.slots = { { index = 1, path = 'World1.sav', kind = kind } }
     expect(files, 'stop', 'unsafe-slot')
 end
-files.slots = {}
+files.slots = { { index = 1, kind = 'unknown' } }
+assert(expect(files, 'choose-file').index == 1) -- no content metadata required
+files.slots = { { index = 0, path = 'World0.sav', kind = 'regular' } }
 expect(files, 'stop', 'missing-slot')
 
-local gameplay = { screen = 'gameplay', profile = 'test-profile', loadedSave = 'dedicated-fixture', playable = true }
+local gameplay = { screen = 'gameplay', profile = 'test-profile', activeSlotIndex = 1, playable = true }
 expect(gameplay, 'ready')
 gameplay.playable = false
 expect(gameplay, 'wait', 'gameplay-not-ready')
-gameplay.loadedSave = 'unrelated'
-expect(gameplay, 'stop', 'save-mismatch')
-gameplay.loadedSave = nil
-expect(gameplay, 'stop', 'save-mismatch')
+gameplay.playable = true
+gameplay.activeSlotIndex = 0
+expect(gameplay, 'stop', 'wrong-slot-index')
+gameplay.activeSlotIndex = nil
+expect(gameplay, 'stop', 'wrong-slot-index')
 
 print('Runtime menu decisions passed')
