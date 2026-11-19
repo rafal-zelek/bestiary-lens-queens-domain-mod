@@ -170,7 +170,15 @@ function Bridge.execute(action, runScenario)
             screen.FocusedSaveSlot = 1
             screen.CurrentSlotContext = 1
             screen:SaveSlotSelected(target.slot.Index, false, target.slot.BackupIndex)
-            screen:ModalDialogueConfirmCallback()
+            -- The confirm modal needs a moment to exist; confirming in the same
+            -- tick does nothing (verified live).
+            ExecuteWithDelay(500, function()
+                ExecuteInGameThread(function()
+                    if screen:IsValid() then
+                        screen:ModalDialogueConfirmCallback()
+                    end
+                end)
+            end)
             return 'selected-index-1'
         end
     end

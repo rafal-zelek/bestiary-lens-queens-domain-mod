@@ -8,6 +8,12 @@ local function valid(value)
     }
 end
 
+ExecuteWithDelay = function(_, fn)
+    fn()
+end
+ExecuteInGameThread = function(fn)
+    fn()
+end
 local screen = { InSaveMenu = true, IntroDone = true }
 local selected
 local confirmed
