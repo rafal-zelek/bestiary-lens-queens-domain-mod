@@ -1,6 +1,7 @@
 local Bridge = {}
 local valid = require('sdk.engine.objects').valid
-local expectedSaveIndex
+-- The disposable test world is always slot index 1 (World1).
+local expectedSaveIndex = 1
 
 ---@return string
 local function gameplay()
