@@ -1,0 +1,43 @@
+name: Dispatch private mirror sync
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mint private-repository token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: rafal-zelek
+          repositories: ${{ secrets.PRIVATE_MIRROR_REPO }}
+          permission-contents: write
+      - name: Dispatch mirror update
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET_REPO: ${{ secrets.PRIVATE_MIRROR_REPO }}
+          BEFORE: ${{ github.event.before }}
+          AFTER: ${{ github.event.after }}
+          FORCED: ${{ github.event.forced }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            BEFORE="$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/main" --jq .object.sha)"
+            AFTER="$BEFORE"
+            FORCED=false
+          fi
+          gh api --method POST "repos/${TARGET_REPO}/dispatches" \
+            -f event_type=public-main-updated \
+            -F client_payload[before]="$BEFORE" \
+            -F client_payload[after]="$AFTER" \
+            -F client_payload[forced]="$FORCED"
