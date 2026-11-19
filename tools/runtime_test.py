@@ -178,10 +178,13 @@ def ensure_process(account, game_id, timeout):
             path, started = matches[0]
             if not previous and started < cutoff - 1:
                 raise MenuFailure('game-process-changed')
-            env = environment(path)
-            if env.get('SteamGameId') != game_id and env.get('SteamAppId') != str(int(game_id) >> 32):
-                raise MenuFailure('game-shortcut-unverified')
-            paths = set(re.findall(r' (/[^\n]+/UE4SS\.dll)$', (path / 'maps').read_text(), re.M))
+            try:
+                env = environment(path)
+                if env.get('SteamGameId') != game_id and env.get('SteamAppId') != str(int(game_id) >> 32):
+                    raise MenuFailure('game-shortcut-unverified')
+                paths = set(re.findall(r' (/[^\n]+/UE4SS\.dll)$', (path / 'maps').read_text(), re.M))
+            except (FileNotFoundError, ProcessLookupError):
+                paths = set()  # pid vanished while scanning; look again
             if len(paths) == 1:
                 return (path, started), Path(next(iter(paths))).parent
         time.sleep(.25)
@@ -210,7 +213,11 @@ class MenuBridge:
                 raise MenuFailure('bridge-request-in-use') from None
             try:
                 while time.monotonic() < deadline:
-                    if start_time(path) != started:
+                    try:
+                        changed = start_time(path) != started
+                    except (FileNotFoundError, ProcessLookupError):
+                        changed = True  # the game process vanished
+                    if changed:
                         raise MenuFailure('game-process-changed')
                     try:
                         fields = self.response.read_text().split()

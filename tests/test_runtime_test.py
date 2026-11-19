@@ -81,3 +81,13 @@ class RuntimeTest(unittest.TestCase):
         with self.assertRaisesRegex(MenuFailure, 'menu-bridge-timeout'):
             bridge.exchange('open-files')
         self.assertEqual(bridge.command.call_count, 1)
+
+    def test_vanished_game_process_is_a_clean_failure(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            bridge = MenuBridge((Path(directory) / 'no-such-pid', 1), root, 1)
+            with self.assertRaises(MenuFailure) as caught:
+                bridge.command('observe', __import__('time').monotonic() + 1)
+            self.assertEqual(str(caught.exception), 'game-process-changed')
+
