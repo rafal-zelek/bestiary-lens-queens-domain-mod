@@ -5,9 +5,9 @@ Version **1.0.0** — a contextual bestiary card for **Queen's Domain** (UE4SS L
 Aim at an enemy in Queen's Domain to see its unlocked bestiary information on a small card.
 
 Runs as plain Lua scripts hosted by UE4SS. Requires the Windows game build (UE 4.27.2), UE4SS Lua support
-and `LoopInGameThreadWithDelay`. Steam Deck through Proton smoke testing confirms loader startup, HUD
-construction and native captions. Full post-migration hover/F10/controller gameplay acceptance is pending;
-native Windows behavior and other UE4SS builds are unverified.
+and `LoopInGameThreadWithDelay`. Offline tests and Steam Deck (Proton) smoke testing cover loader startup, HUD construction,
+native captions and F10 opening a native bestiary entry. Broader gameplay and controller coverage
+is limited; native Windows behavior and other UE4SS builds are unverified.
 
 ## Install
 
