@@ -36,7 +36,7 @@ jobs:
             AFTER="$BEFORE"
             FORCED=false
           fi
-          gh api --method POST "repos/${TARGET_REPO}/dispatches" \
+          gh api --method POST "repos/${GITHUB_REPOSITORY_OWNER}/${TARGET_REPO}/dispatches" \
             -f event_type=public-main-updated \
             -F client_payload[before]="$BEFORE" \
             -F client_payload[after]="$AFTER" \
