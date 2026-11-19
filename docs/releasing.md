@@ -28,29 +28,37 @@ notes. The SDK remains tracked source data.
    The game SDK has its own game-version identity; do not rename it to the mod version.
 2. Commit the source, workflow, aggregated SDK, manifests and version migration reports, and push to `main`.
    Wait for green CI on that commit. Do not commit generated files from `build/`.
-3. Tag that exact commit with the version prefixed by `v` and push that tag. Example for the
-   next version, after updating the files to `0.1.1`:
+3. Tag that exact commit with the version prefixed by `v` and push that tag. For the first public
+   release, after all release gates are approved, the tag will be `v1.0.0`:
 
    ```sh
-   git tag -a v0.1.1 -m "Bestiary Lens 0.1.1"
-   git push origin v0.1.1
+    git tag -a v1.0.0 -m "Bestiary Lens 1.0.0"
+    git push origin v1.0.0
    ```
 
    The tag workflow checks that the tag exactly equals `v` + `tools/package.py`'s `VERSION`;
-   a mismatch fails before package publication. The current `VERSION` is `0.1.0`, so `v1.0.0`
-   will fail until the version is deliberately updated in all locations in step 1.
-   Existing tags should remain immutable.
+   a mismatch fails before package publication. `tools/package.py`, the runtime log marker,
+   README and package tests are aligned to `1.0.0`. Existing tags should remain immutable.
 4. Push the tag and wait for its Release workflow run. The workflow checks out the tag with full history,
    packages that checkout, and generates notes for that same tag/commit. `.github/release-notes/<tag>.md`
-   overrides generated notes when present. There are currently no version tags in the repository;
-   the first release therefore needs a matching curated notes file or a prior semantic version baseline
-   tag, otherwise note generation fails closed. The `tools/test-git-cliff.sh` offline fixture also runs in CI.
+   overrides generated notes when present. `.github/release-notes/v1.0.0.md` is the curated first
+   release note, consistent with the current implementation and tested-compatibility claims. The
+   `tools/test-git-cliff.sh` offline fixture also runs in CI.
 5. After validation succeeds, the workflow creates a published GitHub Release with the installable mod ZIP,
    matching `.zip.sha256` file and the notes as the release body. It verifies the checksum and release
    assets. The SDK is tracked in the repository, not published as a separate package.
    Source code ZIP/TAR assets are repository archives, not the installable mod package.
 
-### Nexus Mods publication
+### Nexus Mods (manual only for 1.0.0)
+
+The 1.0.0 channel is GitHub Release only. Nexus automation must remain disabled/unconfigured for
+this release; do not add Nexus credentials or identifiers to repository settings. After the
+GitHub Release has been published and verified, the user may manually upload the exact
+`BestiaryLens-1.0.0.zip` and its checksum to Nexus. Confirm the Nexus file/version and description
+manually; do not treat Nexus as a release gate or trigger an automated upload.
+
+The workflow below describes the repository's optional Nexus automation for a future release only.
+It is dormant when its three required settings are absent, but must not be enabled for 1.0.0.
 
 The tag workflow can publish to an existing Nexus mod page after the GitHub Release is published.
 Configure all three repository settings before enabling this path:
@@ -93,5 +101,6 @@ of release notes or the mod ZIP.
 
 GitHub's automatically supplied **Source code (zip/tar.gz)** downloads are repository archives,
 not the installable mod package. Users should install `BestiaryLens-<version>.zip` from Assets.
-Pushing a validated tag creates the GitHub Release automatically. Nexus publication is optional and
-depends on the three configured credentials listed above.
+Pushing a validated tag creates the GitHub Release automatically. Nexus automation is optional and
+credential-gated for future use; for 1.0.0 it remains disabled and any Nexus upload is a separate
+manual action by the user.

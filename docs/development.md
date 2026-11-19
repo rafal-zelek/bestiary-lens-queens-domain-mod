@@ -210,7 +210,7 @@ The helper is a development tool and is excluded from the release mod package.
 
 ### Packaging and verification limits
 
-`tools/package.py` (with `VERSION` defined in that file) builds `build/BestiaryLens-0.1.0.zip` and its `.zip.sha256` sidecar
+`tools/package.py` (with `VERSION` defined in that file) builds `build/BestiaryLens-1.0.0.zip` and its `.zip.sha256` sidecar
 from an explicit allowlist. The install ZIP contains the mod payload plus the user README and
 `LICENSE`; it excludes smoke tests, their entry point, runner, and development tools.
 The SDK, its manifest and UE4SS license are tracked source data, not a separate package.

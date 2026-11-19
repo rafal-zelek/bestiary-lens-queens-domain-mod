@@ -2,7 +2,7 @@ local Config = require('config')
 local Game = require('sdk.domain.game')
 
 local TAG = '[BestiaryLens] '
-local VERSION = '0.1.0'
+local VERSION = '1.0.0'
 
 ---@param message string
 local function log(message)
