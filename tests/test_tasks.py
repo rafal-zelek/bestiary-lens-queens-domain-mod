@@ -41,6 +41,30 @@ class TaskTests(unittest.TestCase):
                 self.assertTrue(call.kwargs['check'])
                 self.assertNotIn('shell', call.kwargs)
 
+    def test_check_summary_prints_one_status_line_per_gate(self):
+        output = io.StringIO()
+        result = subprocess.CompletedProcess(['tool'], 0, stdout='quiet success output\n', stderr='')
+        with patch.object(self.tasks.subprocess, 'run', return_value=result) as run, contextlib.redirect_stdout(output):
+            self.assertEqual(self.tasks.main(['check', '--summary']), 0)
+        lines = output.getvalue().splitlines()
+        self.assertEqual(len(lines), 5)
+        for line, gate in zip(lines, ('format-check', 'types-verify', 'workflow-lint', 'lint', 'test')):
+            self.assertRegex(line, rf'^{gate} PASS dur=\d+\.\d{{2}}s$')
+        self.assertEqual(run.call_count, 5)
+        self.assertTrue(all(call.kwargs['capture_output'] and call.kwargs['text'] for call in run.call_args_list))
+        self.assertNotIn('quiet success output', output.getvalue())
+
+    def test_check_summary_stops_at_failure_and_caps_error_lines(self):
+        output = io.StringIO()
+        errors = '\n'.join(f'error: problem {index}' for index in range(20))
+        result = subprocess.CompletedProcess(['stylua'], 7, stdout='', stderr=errors)
+        with patch.object(self.tasks.subprocess, 'run', return_value=result) as run, contextlib.redirect_stdout(output):
+            self.assertEqual(self.tasks.main(['check', '--summary']), 7)
+        lines = output.getvalue().splitlines()
+        self.assertRegex(lines[0], r'^format-check FAIL exit=7 dur=\d+\.\d{2}s$')
+        self.assertEqual(lines[1:], [f'error: problem {index}' for index in range(15)])
+        self.assertEqual(run.call_count, 1)
+
     def test_failure_stops_check_and_preserves_status(self):
         with patch.object(self.tasks.subprocess, 'run', side_effect=subprocess.CalledProcessError(7, ['stylua'])) as run:
             self.assertEqual(self.tasks.main(['check']), 7)
