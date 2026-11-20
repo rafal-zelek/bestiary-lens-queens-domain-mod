@@ -26,9 +26,9 @@ notes. The SDK remains tracked source data.
 1. Update the mod version consistently in `tools/package.py` (`VERSION`), the README version/install
    package filename, and the version marker in `Mods/BestiaryLens/Scripts/bootstrap.lua`.
    The game SDK has its own game-version identity; do not rename it to the mod version.
-2. Commit the source, workflow, aggregated SDK, manifests and version migration reports, and push to `main`.
+2. Commit the source, workflow, aggregated SDK, manifests and version migration reports, and land them on `main` through an approved pull request.
    Wait for green CI on that commit. Do not commit generated files from `build/`.
-3. Tag that exact commit with the version prefixed by `v` and push that tag. For the first public
+3. With the maintainer's explicit go, tag that exact commit with the version prefixed by `v` and push that tag. For the first public
    release, after all release gates are approved, the tag will be `v1.0.0`:
 
    ```sh
