@@ -231,9 +231,9 @@ scenario. Declare the desired save by alias and readiness by intent (for example
 `{ save = 'dedicated-test-save', readiness = 'playable' }`). A future runtime adapter must
 resolve that alias locally to an exact profile/save pair before calling `Menu.decide`.
 
-On Steam Deck, opening **Play** in the title menu (**Graj** in Polish) opened the
-file selector (**Wybór pliku**) without loading a save. The selector displayed occupied and empty
-rows. An empty row could be highlighted, so focus alone cannot identify a loadable fixture.
+On Steam Deck, selecting the title menu's Play option opened the file selector without
+loading a save. The selector displayed occupied and empty rows. An empty row could be highlighted, so
+focus alone cannot identify a loadable fixture.
 The tracked SDK declares `TitleScreenUI.LoadGameButton`, `InSaveMenu`, and
 `SaveSlotWidget.Index`, `Backup`, and `Is Suspend Save`. These are adapter candidates,
 not validated runtime bindings.
