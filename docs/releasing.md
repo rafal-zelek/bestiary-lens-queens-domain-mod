@@ -76,6 +76,8 @@ Markdown to BBCode or claim a particular rendering. The `description` input for 
 the uploaded file version; it is deliberately left unset.
 
 The page's separate full description is the BBCode in [`nexus-description.bbcode`](nexus-description.bbcode).
+
+Screenshots are not embedded in that BBCode (Nexus recommends its Images tab over `[img]`, and external hosts such as raw.githubusercontent.com are unverified for the site). Upload `docs/screenshots/skeleton-lens.jpg` to the mod page's image gallery manually.
 After the upload action succeeds, a separate `PATCH /mods/{id}` request sets only the page `description`;
 it leaves the page summary unchanged. The API currently marks this operation Experimental and requires
 the caller to be on the mod team or an admin. See the official
