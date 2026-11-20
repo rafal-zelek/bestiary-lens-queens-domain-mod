@@ -145,8 +145,11 @@ tests are not proof of in-game behavior.
 
 - Keep unpushed work off `main`: create a working branch for local commits and move any
   already-unpushed commits on `main` onto it, so `main` stays at `origin/main`.
-- Committing is local. Pushing to `main`, tagging and publishing are separate release steps in
-  `docs/releasing.md`; routine commits do not push branches or create tags.
+- Committing is local. Tagging and publishing are separate release steps in
+  `docs/releasing.md`; routine commits do not create tags.
+- Changes land through pull requests based on `main`; do not push to `main` directly. Discuss a
+  pull request in its comments. Once it is approved, the maintainer's orchestrator merges it
+  (squash). Contributors and agents do not merge their own pull requests.
 
 ## Repository conventions
 

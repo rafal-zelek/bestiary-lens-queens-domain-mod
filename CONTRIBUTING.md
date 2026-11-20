@@ -8,6 +8,12 @@ Before opening a change, run the relevant checks from the repository root. The f
 CI-equivalent gate is `docker run --rm --network none bestiary-lens-ci` after building the
 pinned toolchain image; see the development guide for commands and generated-file rules.
 
+## Pull requests
+
+Base pull requests on `main`. Reviewers and contributors discuss a pull request in its comments.
+When a maintainer approves it, the maintainer's orchestrator merges it (squash); contributors do
+not merge their own pull requests. Tags and releases need the maintainer's explicit go.
+
 ## AI-assisted development
 
 Codex assisted with code, documentation and tests in this repository. Maintainers are responsible
