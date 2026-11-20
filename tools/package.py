@@ -4,7 +4,7 @@ import hashlib
 from pathlib import Path
 import zipfile
 
-VERSION = '0.1.0'
+VERSION = '1.0.0'
 MOD_FILES = (
     'enabled.txt', 'Scripts/main.lua', 'Scripts/bootstrap.lua', 'Scripts/config.lua',
     'Scripts/card_model.lua', 'Scripts/card_view.lua',
